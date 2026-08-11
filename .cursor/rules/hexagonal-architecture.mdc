@@ -1,0 +1,15 @@
+---
+description: Hexagonal dependency rules for TypeScript under src/
+globs: src/**/*.ts,tests/**/*.ts
+alwaysApply: false
+---
+
+# Hexagonal architecture
+
+Full guide: `docs/architecture/hexagonal.md`
+
+- `src/domain/` must not import adapters.
+- Inbound adapters must not import outbound adapters — use application ports.
+- Wire adapters in `src/main.ts` only.
+
+After layer changes, run `npm run lint:arch`.
