@@ -17,6 +17,7 @@ Then:
 
 - `GET http://127.0.0.1:3000/health` → `{ "status": "ok" }`
 - `POST http://127.0.0.1:3000/echo` with `{ "message": "hi" }` → `{ "message": "hi" }`
+- `POST http://127.0.0.1:3000/find-places` with `{ "latitude": 40.7, "longitude": -74, "radiusMeters": 500 }` → `{ "places": [...] }` (requires `GOOGLE_PLACES_API_KEY` in `.env`)
 
 Copy `.env.example` to `.env` before `npm run dev` — Node `--env-file` fails if `.env` is missing.
 

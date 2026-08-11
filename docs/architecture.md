@@ -20,7 +20,7 @@ domain          (types, invariants, domain errors)
 
 - `domain` and `application` must not import Express, HTTP types, or client SDKs.
 - Adapters depend inward on application/domain.
-- Outbound ports appear only when a real external I/O dependency exists (none in v1).
+- Outbound ports appear when a real external I/O dependency exists. The shared `GoogleClient` and Places API adapter live under `src/adapters/google/` and are wired from `src/composition/google-services.ts`.
 
 ## Composition root
 
@@ -37,6 +37,16 @@ Do not re-register routes differently in tests.
 |--------|------|------|
 | `GET` | `/health` | Liveness (`{ "status": "ok" }`) — independent of features |
 | `POST` | `/echo` | Toy exemplar — body `{ "message": string }` |
+| `POST` | `/find-places` | Nearby no-website search — body `{ "latitude", "longitude", "radiusMeters" }` |
+
+## Outbound adapters
+
+| Adapter | Location | Role |
+|---------|----------|------|
+| Google HTTP client | `src/adapters/google/google-client.ts` | Shared `fetch` + API key + field mask for any Google API |
+| Google Places API | `src/adapters/google/google-places-api-service.ts` | `searchNearby` via `GoogleClient` |
+
+Composition wires `GoogleClient` → `GooglePlacesApiService` → `FindPlacesService` in `src/composition/google-services.ts` and `buildApp`.
 
 Validation for echo lives at the HTTP edge (Zod). Domain may still reject business-invalid values.
 
@@ -48,4 +58,4 @@ Validation for echo lives at the HTTP edge (Zod). Domain may still reject busine
 
 ## Config
 
-Zod-validated env in `src/composition/env.ts` (`PORT`, `HOST`, `LOG_LEVEL`). Ban raw `process.env` outside that module. Ship `.env.example`; keep `.env` gitignored.
+Zod-validated env in `src/composition/env.ts` (`PORT`, `HOST`, `LOG_LEVEL`, `GOOGLE_PLACES_API_KEY`). Ban raw `process.env` outside that module. Ship `.env.example`; keep `.env` gitignored. `npm test` does not require a Google key — HTTP tests inject a stub Places port.

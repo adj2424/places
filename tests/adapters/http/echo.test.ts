@@ -2,10 +2,12 @@ import { describe, expect, it } from "vitest";
 import request from "supertest";
 import { buildApp } from "../../../src/composition/build-app.js";
 import { loadEnv } from "../../../src/composition/env.js";
+import { createLogger } from "../../../src/composition/logger.js";
 
 describe("POST /echo", () => {
   function app() {
-    return buildApp({ env: loadEnv({ LOG_LEVEL: "silent" }) });
+    const env = loadEnv({ LOG_LEVEL: "silent" });
+    return buildApp({ env, logger: createLogger(env.LOG_LEVEL) });
   }
 
   it("echoes a valid message", async () => {

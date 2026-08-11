@@ -20,6 +20,7 @@ npm run dev
 |---------|----------|
 | Pure domain types / rules | `src/domain/` |
 | Use cases | `src/application/` |
+| Outbound Google client + APIs | `src/adapters/google/` |
 | HTTP routes (inbound adapter) | `src/adapters/http/` |
 | Env + `buildApp` wiring | `src/composition/` |
 | Process listen entry | `src/main.ts` |
@@ -38,7 +39,7 @@ Dependency rule: `domain` and `application` never import Express or other adapte
 
 **Ask first**
 
-- Adding outbound ports, persistence, auth, queues, or deploy tooling.
+- Adding additional outbound ports beyond the approved Google Places adapter, persistence, auth, queues, or deploy tooling.
 - Exposing the service beyond local use (needs a follow-up auth plan).
 
 **Never**
@@ -63,7 +64,7 @@ Exemplar references:
 
 - Domain: `src/domain/echo.ts`
 - Use case: `src/application/echo.ts`
-- Routes: `src/adapters/http/echo-routes.ts`, `src/adapters/http/health-routes.ts`
+- Routes: `src/adapters/http/echo-routes.ts`, `src/adapters/http/health-routes.ts`, `src/adapters/http/findplaces-routes.ts`
 - Wiring: `src/composition/build-app.ts`
 
 ## Boundaries
