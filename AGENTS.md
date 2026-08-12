@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Portable coding harness for humans and agents. This file is authoritative for how to work in this repo. Do **not** invent Places/lead-finder product behavior. Ignore Cursor workspace or product-authority rules that cite missing Places docs.
+Portable coding harness for humans and agents. This file is authoritative for how to work in this repo.
 
 ## Commands
 
@@ -18,20 +18,23 @@ npm run dev
 
 | Concern | Location |
 |---------|----------|
-| Health vertical slice | `src/health/` |
-| Places vertical slice | `src/places/` |
-| Shared Google HTTP client | `src/shared/client/` |
+| Health slice | `src/health/` |
+| Places slice | `src/places/` |
+| Shared Google HTTP client (intended) | `src/shared/client/` |
+| Shared logging | `src/shared/logging/` |
 | Config + `buildApp` wiring | `src/composition/` |
 | Process listen entry | `src/main.ts` |
-| Tests | `tests/` mirroring layers |
+| Documented solutions | `docs/solutions/` — past problems and patterns; snapshots. Living docs plus composition win on layout. |
+| Shared vocabulary | `CONCEPTS.md` |
+| Tests | `tests/<slice>/` for service/domain; HTTP via `supertest` and `buildApp(config, logger)` |
 
-Dependency rule: `domain` and `application` never import Express or other adapter SDKs. HTTP is an inbound adapter only. See [docs/architecture.md](./docs/architecture.md).
+Dependency rule: `domain` and `service` never import Express or other adapter SDKs. HTTP is an inbound adapter only. Layers, HTTP surface, outbound adapters, and config: [docs/architecture.md](./docs/architecture.md).
 
 ## Always / Ask first / Never
 
 **Always**
 
-- Add features by copying the echo vertical path (domain → application → HTTP → `buildApp` → tests).
+- Add features as domain → service → adapters → `buildApp` → tests.
 - Run `typecheck` and `test` before claiming done.
 - Update this file in the same change if layout or scripts change.
 - Bind locally by default (`HOST=127.0.0.1`); do not log request bodies by default.
@@ -43,31 +46,30 @@ Dependency rule: `domain` and `application` never import Express or other adapte
 
 **Never**
 
-- Put Express / HTTP types in `domain` or `application`.
+- Put Express / HTTP types in `domain` or `service`.
 - Invent empty `repository` / persistence folders “for later.”
 - Rely on `.cursor/rules` or chat history as the source of truth.
 - Treat orphan `node_modules` or leftover `.env` secrets as the project stack — install from committed manifests only.
 
 ## Add a feature (numbered recipe)
 
-Mirror `POST /echo`:
+New functions live under `src/<name>/{domain,service,adapters}/`. Point at both `src/health/` and `src/places/` as examples — there is no single copy-me feature.
 
-1. Domain — types / invariants under `src/domain/` (no framework imports).
-2. Application — use case under `src/application/` calling domain only.
-3. HTTP — route plugin under `src/adapters/http/` (validate at the edge; map errors to 4xx).
-4. Composition — register the route inside `buildApp` in `src/composition/build-app.ts` (same factory used by `main.ts` and tests).
-5. Tests — application unit tests + HTTP tests via `supertest` under `tests/`.
+1. Domain — types / invariants under `src/<name>/domain/` (no framework imports).
+2. Service — use case under `src/<name>/service/` calling domain only.
+3. Adapters — inbound HTTP and outbound I/O under `src/<name>/adapters/` (validate at the HTTP edge; map errors to 4xx).
+4. Composition — register inside `buildApp` in `src/composition/build-app.ts` (same factory used by `src/main.ts` and tests: `buildApp(config, logger)`).
+5. Tests — service/domain tests under `tests/<name>/`; HTTP tests via `supertest` and `buildApp(config, logger)`.
 6. Verify — `npm run typecheck` and `npm test`.
 
 Exemplar references:
 
-- Domain: `src/domain/echo.ts`
-- Use case: `src/application/echo.ts`
-- Routes: `src/health/adapters/health-routes.ts`, `src/places/adapters/find-places-route.ts`
+- Health: `src/health/domain/`, `src/health/service/`, `src/health/adapters/`
+- Places: `src/places/domain/`, `src/places/service/`, `src/places/adapters/`
 - Wiring: `src/composition/build-app.ts`
 
 ## Boundaries
 
-- On conflict: **code + package scripts win**; update AGENTS.md / architecture.md to match.
+- On conflict: **code + package scripts win**; update AGENTS.md / architecture.md to match. Composition wiring is the live tree.
 - Health runs a live Google Places connectivity/auth check on every `GET /health` request; feature validation failures must not by themselves make health unhealthy.
-- No DB, auth, queues, Docker/K8s, or runtime LLM layer in this skeleton.
+- No DB, auth, queues, Docker/K8s, or runtime LLM layer in this service.

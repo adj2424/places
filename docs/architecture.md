@@ -1,6 +1,8 @@
 # Architecture
 
-Slim ports-and-adapters (hexagonal) layout for a Node 22+ TypeScript microservice.
+Slim ports-and-adapters (hexagonal) layout for a Node 22+ TypeScript Places service.
+
+How to add a feature: [AGENTS.md](../AGENTS.md). Glossary: [CONCEPTS.md](../CONCEPTS.md).
 
 ## Layers
 
@@ -9,7 +11,7 @@ HTTP client
     ↓
 feature adapters (Express routes under src/health/, src/places/, …)
     ↓
-service / domain (per vertical slice)
+service / domain (per slice)
     ↓
 outbound adapters (Google client, Places API)
 ```
@@ -20,14 +22,14 @@ outbound adapters (Google client, Places API)
 
 - Domain and service layers must not import Express, HTTP types, or client SDKs.
 - Adapters depend inward on domain/service ports.
-- Outbound Google I/O lives under `src/shared/client/` and `src/places/adapters/`, wired from `src/composition/build-app.ts`.
+- Outbound Google I/O lives under `src/shared/client/` (intended shared client) and slice adapters, wired from `src/composition/build-app.ts`.
 
 ## Composition root
 
-`buildApp(deps)` in `src/composition/build-app.ts` is the **single** registration path:
+`buildApp(config, logger)` in `src/composition/build-app.ts` is the **single** registration path:
 
-- Process entry: `loadConfig()` → `buildApp` → `listen`
-- Tests: `buildApp` → `supertest(app)` (no listen required)
+- Process entry: `loadConfig()` → `buildApp(config, logger)` → `listen`
+- Tests: `buildApp(config, logger)` → `supertest(app)` (no listen required)
 
 Do not re-register routes differently in tests.
 
@@ -44,7 +46,7 @@ Do not re-register routes differently in tests.
 |---------|----------|------|
 | Google HTTP client | `src/shared/client/client.ts` | Shared `fetch` + API key + field mask (GET/POST) |
 | Google Places nearby search | `src/places/adapters/google.ts` | `searchNearby` for find-places |
-| Google Places health ping | `src/places/adapters/google-health.ts` | Place Details GET for `/health` connectivity/auth |
+| Google Places health ping | `src/health/adapters/google-health.ts` | Place Details GET for `/health` connectivity/auth |
 
 Composition wires health and find-places services in `buildApp`.
 
@@ -53,8 +55,8 @@ Validation for find-places lives at the HTTP edge (Zod).
 ## Testing
 
 - Service / domain: direct unit tests
-- HTTP: `supertest` through `buildApp`
-- Inject stub health check and Places service so tests do not require a real Google key
+- HTTP: `supertest` through `buildApp(config, logger)`
+- Tests must not require a real Google key or a committed `.env`
 
 ## Config
 

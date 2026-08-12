@@ -1,6 +1,6 @@
-# TypeScript microservice skeleton
+# Places service
 
-Reusable, domain-agnostic Node.js TypeScript backend starter with slim ports-and-adapters layout, Express HTTP adapter, and an agent coding harness.
+Local Node.js TypeScript service that searches nearby places without websites, with a health probe that includes a Google Places connectivity/auth check.
 
 ## Quick start
 
@@ -16,7 +16,6 @@ npm run dev
 Then:
 
 - `GET http://127.0.0.1:3000/health` → `{ "status": "ok", "checks": { "googlePlaces": "ok" } }` when Google Places is reachable (requires `GOOGLE_PLACES_API_KEY` in `.env` for a healthy response)
-- `POST http://127.0.0.1:3000/echo` with `{ "message": "hi" }` → `{ "message": "hi" }`
 - `POST http://127.0.0.1:3000/find-places` with `{ "latitude": 40.7, "longitude": -74, "radiusMeters": 500 }` → `{ "places": [...] }` (requires `GOOGLE_PLACES_API_KEY` in `.env`)
 
 Copy `.env.example` to `.env` before `npm run dev` — Node `--env-file` fails if `.env` is missing.
@@ -25,6 +24,7 @@ Copy `.env.example` to `.env` before `npm run dev` — Node `--env-file` fails i
 
 - **[AGENTS.md](./AGENTS.md)** — how humans and coding agents add features
 - **[docs/architecture.md](./docs/architecture.md)** — layer map and boundaries
+- **[CONCEPTS.md](./CONCEPTS.md)** — shared vocabulary
 
 ## Scripts
 
