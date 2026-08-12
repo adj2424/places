@@ -15,7 +15,7 @@ npm run dev
 
 Then:
 
-- `GET http://127.0.0.1:3000/health` → `{ "status": "ok" }`
+- `GET http://127.0.0.1:3000/health` → `{ "status": "ok", "checks": { "googlePlaces": "ok" } }` when Google Places is reachable (requires `GOOGLE_PLACES_API_KEY` in `.env` for a healthy response)
 - `POST http://127.0.0.1:3000/echo` with `{ "message": "hi" }` → `{ "message": "hi" }`
 - `POST http://127.0.0.1:3000/find-places` with `{ "latitude": 40.7, "longitude": -74, "radiusMeters": 500 }` → `{ "places": [...] }` (requires `GOOGLE_PLACES_API_KEY` in `.env`)
 

@@ -1,19 +1,26 @@
+import type { GoogleConfig } from '../../composition/config.js';
+import type { Logger } from '../../shared/logging/logger.js';
 import type { GooglePlace, GoogleNearbyResponse, SearchQuery } from '../domain/google.js';
 
 export class GooglePlacesAdapter {
-  constructor() {}
-
   private readonly PLACES_NEARBY_FIELD_MASK =
     'places.id,places.displayName,places.formattedAddress,places.nationalPhoneNumber,places.websiteUri';
 
+  constructor(
+    private readonly config: GoogleConfig,
+    private readonly logger: Logger
+  ) {}
+
   async getNearbyPlaces(query: SearchQuery): Promise<GooglePlace[]> {
+    const started = Date.now();
+
     let response: Response;
     try {
-      response = await fetch('https://places.googleapis.com/v1/places:searchNearby', {
+      response = await fetch(`${this.config.baseUrl}/places:searchNearby`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-Goog-Api-Key': process.env.GOOGLE_API_KEY!,
+          'X-Goog-Api-Key': this.config.apiKey,
           'X-Goog-FieldMask': this.PLACES_NEARBY_FIELD_MASK
         },
         body: JSON.stringify({
@@ -29,11 +36,20 @@ export class GooglePlacesAdapter {
           }
         })
       });
+      if (!response.ok) {
+        this.logger.error('google request returned non 200 status', {
+          durationMs: Date.now() - started,
+          statusCode: response.status
+        });
+        throw new Error('google request returned non 200 status');
+      }
     } catch {
-      throw new Error('google api unavailable');
+      this.logger.error('google request failed', { durationMs: Date.now() - started });
+      throw new Error('google request failed');
     }
 
     const data = (await response.json()) as GoogleNearbyResponse;
+    this.logger.info('google request successful', { durationMs: Date.now() - started });
     return data.places;
   }
 }

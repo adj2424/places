@@ -17,4 +17,4 @@ The copyable sample feature path (domain rule → use case → HTTP route → co
 *Avoid:* empty repository folders “for later,” feature slices that skip domain when there is a domain rule
 
 ### Health
-Liveness-only inbound check. It must not call feature use cases; feature validation failures must not break health.
+Inbound probe on `GET /health` that reports service reachability plus a live Google Places connectivity/auth check. Feature validation failures must not by themselves make health unhealthy when Google Places would otherwise pass; missing/invalid Google credentials or a failed/timed-out Places check make health unhealthy.

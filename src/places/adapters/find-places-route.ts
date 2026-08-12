@@ -1,5 +1,6 @@
 import type { Express, Request, Response } from 'express';
 import { z } from 'zod';
+import type { Logger } from '../../shared/logging/logger.js';
 import type { GooglePlace, SearchQuery } from '../domain/google.js';
 import type { PlacesService } from '../domain/port.js';
 
@@ -25,10 +26,11 @@ function toPlaceResponse(place: GooglePlace): PlaceResponse {
   };
 }
 
-export function registerPlacesRoutes(app: Express, placesService: PlacesService): void {
+export function registerPlacesRoutes(app: Express, placesService: PlacesService, logger: Logger): void {
   app.post('/find-places', async (req: Request, res: Response) => {
     const parsedInput = findPlacesBodySchema.safeParse(req.body);
     if (!parsedInput.success) {
+      logger.warn('invalid request', { method: req.method, path: req.path, statusCode: 400 });
       res.status(400).json({
         error: 'invalid body: latitude, longitude, and radiusMeters are required'
       });
@@ -38,7 +40,8 @@ export function registerPlacesRoutes(app: Express, placesService: PlacesService)
     try {
       const places = await placesService.getPlaces(parsedInput.data);
       res.status(200).json({ places: places.map(toPlaceResponse) });
-    } catch (error) {
+    } catch {
+      logger.error('places search failed', { path: req.path });
       res.status(500).json({ error: 'places search unavailable' });
     }
   });

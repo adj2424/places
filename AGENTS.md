@@ -18,11 +18,10 @@ npm run dev
 
 | Concern | Location |
 |---------|----------|
-| Pure domain types / rules | `src/domain/` |
-| Use cases | `src/application/` |
-| Outbound Google client + APIs | `src/adapters/google/` |
-| HTTP routes (inbound adapter) | `src/adapters/http/` |
-| Env + `buildApp` wiring | `src/composition/` |
+| Health vertical slice | `src/health/` |
+| Places vertical slice | `src/places/` |
+| Shared Google HTTP client | `src/shared/client/` |
+| Config + `buildApp` wiring | `src/composition/` |
 | Process listen entry | `src/main.ts` |
 | Tests | `tests/` mirroring layers |
 
@@ -64,11 +63,11 @@ Exemplar references:
 
 - Domain: `src/domain/echo.ts`
 - Use case: `src/application/echo.ts`
-- Routes: `src/adapters/http/echo-routes.ts`, `src/adapters/http/health-routes.ts`, `src/adapters/http/findplaces-routes.ts`
+- Routes: `src/health/adapters/health-routes.ts`, `src/places/adapters/find-places-route.ts`
 - Wiring: `src/composition/build-app.ts`
 
 ## Boundaries
 
 - On conflict: **code + package scripts win**; update AGENTS.md / architecture.md to match.
-- Health is liveness only and must not call feature use cases.
+- Health runs a live Google Places connectivity/auth check on every `GET /health` request; feature validation failures must not by themselves make health unhealthy.
 - No DB, auth, queues, Docker/K8s, or runtime LLM layer in this skeleton.
