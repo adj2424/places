@@ -1,5 +1,3 @@
-import { GoogleApiError } from './google-api-error.js';
-
 export type GoogleClientConfig = {
   apiKey: string;
   baseUrl: string;
@@ -35,15 +33,13 @@ export class GoogleClient {
         body: JSON.stringify(options.body)
       });
     } catch {
-      throw new GoogleApiError('google api unavailable', 503);
+      throw new Error('google api unavailable');
     }
 
     if (!response.ok) {
-      const statusCode = response.status === 429 || response.status >= 500 ? 503 : 502;
-      throw new GoogleApiError('google api unavailable', statusCode);
+      throw new Error('google api unavailable');
     }
 
     return (await response.json()) as TResponse;
   }
 }
-

@@ -1,13 +1,13 @@
 import express, { type Express } from 'express';
-import { echoMessage } from '../application/echo.js';
-import { registerEchoRoutes } from '../adapters/http/echo-routes.js';
-import { registerFindPlacesRoutes } from '../adapters/http/findplaces-routes.js';
-import { registerHealthRoutes } from '../adapters/http/health-routes.js';
-import { requestLogging } from '../adapters/http/request-logging.js';
-import { createLogger, type Logger } from './logger.js';
-import { GoogleClient } from '../adapters/google/google-client.js';
+import { registerHealthRoutes } from '../health/adapters/health-routes.js';
+import { registerPlacesRoutes } from '../places/adapters/find-places-route.js';
+import { GooglePlacesAdapter } from '../places/adapters/google.js';
+import type { PlacesService } from '../places/domain/port.js';
+import { PlacesServiceImpl } from '../places/service/places-service.js';
+import { GoogleClient } from '../shared/client/client.js';
+import { requestLogging } from '../shared/logging/request-logging.js';
 import type { Env } from './env.js';
-import { GooglePlacesApiService } from '../adapters/google/google-places-api-service.js';
+import type { Logger } from './logger.js';
 
 export type AppDeps = {
   env: Env;
@@ -22,15 +22,11 @@ export function buildApp(deps: AppDeps): Express {
   app.use(express.json({ limit: '32kb' }));
   app.use(requestLogging(logger));
 
-  const googleClient = new GoogleClient({
-    apiKey: deps.env.GOOGLE_PLACES_API_KEY!,
-    baseUrl: 'https://places.googleapis.com/v1'
-  });
-  const googlePlacesService = new GooglePlacesApiService(googleClient);
+  const googlePlacesAdapter = new GooglePlacesAdapter();
+  const placesService = new PlacesServiceImpl(googlePlacesAdapter);
 
   registerHealthRoutes(app);
-  registerEchoRoutes(app, { echo: echoMessage });
-  registerFindPlacesRoutes(app, googlePlacesService);
+  registerPlacesRoutes(app, placesService);
 
   return app;
 }
