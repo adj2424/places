@@ -1,6 +1,7 @@
 ---
 title: Prefer Express HTTP adapter over Fastify in TypeScript hexagonal microservice
 date: 2026-08-11
+last_refreshed: 2026-08-12
 category: tooling-decisions
 module: http-adapter
 problem_type: tooling_decision
@@ -8,7 +9,7 @@ component: tooling
 severity: medium
 applies_when:
   - "Choosing or swapping the HTTP framework for a TypeScript hexagonal microservice"
-  - "Inbound HTTP adapter must stay replaceable without touching domain or application layers"
+  - "Inbound HTTP adapter must stay replaceable without touching domain or service layers"
   - "HTTP tests need to use supertest against an Express app instead of Fastify inject()"
   - "Edge validation is handled with Zod at the route boundary"
 tags:
@@ -30,154 +31,96 @@ related_components:
 
 ## Context
 
-This skeleton originally planned Fastify for the inbound HTTP adapter. The settled tooling decision (plan KTD2) is Express instead: keep a slim hexagonal layout, treat HTTP as an inbound adapter only, and test through a shared `buildApp` factory with `supertest` rather than Fastify’s `inject` API. The durable point is not “Express is better in general,” but that swapping the HTTP library must not leak framework types into `domain` / `application`, and docs + manifests must stay aligned with the code that actually runs.
+This skeleton originally planned Fastify for the inbound HTTP adapter. The settled tooling decision (plan KTD2) is Express instead: keep a slim hexagonal layout, treat HTTP as an inbound adapter only, and test through a shared `buildApp` factory with `supertest` rather than Fastify’s `inject` API. The durable point is not “Express is better in general,” but that swapping the HTTP library must not leak framework types into `domain` / `service`, and docs + manifests must stay aligned with the code that actually runs.
 
-At the current tree, the runtime dependency is Express (`express` in `package.json` dependencies; no Fastify package). Composition builds an Express app in `src/composition/build-app.ts`. Routes live under `src/adapters/http/`. Domain and application modules have no Express imports. HTTP tests use `supertest` against `buildApp(...)`. `AGENTS.md` and `docs/architecture.md` document Express + `supertest` as the project contract.
+At the current tree, the runtime dependency is Express (`express` in `package.json` dependencies; no Fastify package). Composition builds an Express app in `src/composition/build-app.ts`. Routes live in vertical-slice adapters (`src/health/adapters/`, `src/places/adapters/`). Domain and service modules have no Express imports. Process entry loads config via `loadConfig`, creates a logger, and passes both into `buildApp`. `AGENTS.md` and `docs/architecture.md` document Express + `supertest` as the project contract.
 
 ## Guidance
 
-Prefer Express as the HTTP adapter for this skeleton, and keep hexagonal boundaries intact when adding or changing HTTP surface area.
+Prefer Express as the HTTP adapter for this service, and keep hexagonal boundaries intact when adding or changing HTTP surface area.
 
 **1. Single app factory, no listen in tests**
 
-`buildApp` is the only registration path. It constructs Express, applies JSON parsing and request logging middleware, registers health and echo routes, and returns the app without listening:
+`buildApp` is the only registration path. It constructs Express, applies JSON parsing, wires health and places services, registers their routes, and returns the app without listening:
 
-```15:26:src/composition/build-app.ts
-export function buildApp(deps: AppDeps): Express {
-  const logger = deps.logger;
+```11:25:src/composition/build-app.ts
+export function buildApp(config: Config, logger: Logger): Express {
   const app = express();
   app.disable('x-powered-by');
   app.use(express.json({ limit: '32kb' }));
-  app.use(requestLogging(logger));
 
-  registerHealthRoutes(app);
-  registerEchoRoutes(app, { echo: echoMessage });
+  const googlePlacesHealthCheck = new GooglePlacesHealthAdapter(logger);
+  const healthService = new HealthServiceImpl(googlePlacesHealthCheck);
+
+  const googlePlacesAdapter = new GooglePlacesAdapter(config.google, logger);
+  const placesService = new PlacesServiceImpl(googlePlacesAdapter);
+
+  registerHealthRoutes(app, healthService, logger);
+  registerPlacesRoutes(app, placesService, logger);
 
   return app;
 }
 ```
 
-Process entry and HTTP tests load env, create a logger, and pass both into `buildApp` (`AppDeps` requires `env` and `logger`). The factory does not listen. Do not re-register routes in a second, test-only wiring path.
+Process entry and HTTP tests load config, create a logger, and pass both into `buildApp`. The factory does not listen. Do not re-register routes in a second, test-only wiring path.
 
 **2. Keep Express types at the adapter edge**
 
-Route modules may import Express types and register handlers on `Express`. Example health route:
+Route modules may import Express types and register handlers on `Express`. Health routes delegate to an injected service:
 
-```1:7:src/adapters/http/health-routes.ts
-import type { Express } from "express";
-
-export function registerHealthRoutes(app: Express): void {
-  app.get("/health", (_req, res) => {
-    res.status(200).json({ status: "ok" });
+```5:11:src/health/adapters/health-routes.ts
+export function registerHealthRoutes(app: Express, healthService: HealthService, logger: Logger): void {
+  app.get('/health', async (_req, res) => {
+    const result = await healthService.healthCheck();
+    const statusCode = result === 'ok' ? 200 : 503;
+    logger.info('health check result', { status: result });
+    res.status(statusCode).json({ status: result });
   });
 }
 ```
 
-Validate request bodies at the HTTP edge (Zod), then call an injected use-case function. Echo maps Zod failures and domain validation errors to 4xx without pulling Express into domain:
+Validate request bodies at the HTTP edge (Zod), then call an injected service. Places maps Zod failures to 4xx without pulling Express into domain:
 
-```7:31:src/adapters/http/echo-routes.ts
-const echoBodySchema = z.object({
-  message: z.string().min(1),
-});
-
-export function registerEchoRoutes(
-  app: Express,
-  deps: { echo: EchoUseCase },
-): void {
-  app.post("/echo", (req: Request, res: Response) => {
-    const parsed = echoBodySchema.safeParse(req.body);
-    if (!parsed.success) {
-      res.status(400).json({ error: "invalid body: message must be a non-empty string" });
+```29:37:src/places/adapters/find-places-route.ts
+export function registerPlacesRoutes(app: Express, placesService: PlacesService, logger: Logger): void {
+  app.post('/find-places', async (req: Request, res: Response) => {
+    const parsedInput = findPlacesBodySchema.safeParse(req.body);
+    if (!parsedInput.success) {
+      logger.warn('invalid request', { method: req.method, path: req.path, statusCode: 400 });
+      res.status(400).json({
+        error: 'invalid body: latitude, longitude, and radiusMeters are required'
+      });
       return;
     }
-
-    try {
-      const result = deps.echo({ message: parsed.data.message });
-      res.status(200).json(result);
-    } catch (error) {
-      if (error instanceof EchoValidationError) {
-        res.status(error.statusCode).json({ error: error.message });
-        return;
-      }
-      throw error;
-    }
-  });
-}
 ```
 
-**3. Domain and application stay framework-free**
+**3. Domain and service stay framework-free**
 
-Domain owns types, domain errors, and invariants with no Express (or other adapter SDK) imports:
-
-```1:23:src/domain/echo.ts
-export type EchoResult = {
-  message: string;
-};
-
-export class EchoValidationError extends Error {
-  readonly statusCode = 400;
-
-  constructor(message: string) {
-    super(message);
-    this.name = "EchoValidationError";
-  }
-}
-
-/** Domain rule: message must be a non-empty string. */
-export function normalizeEchoMessage(message: unknown): string {
-  if (typeof message !== "string") {
-    throw new EchoValidationError("message must be a string");
-  }
-  if (message.length === 0) {
-    throw new EchoValidationError("message must not be empty");
-  }
-  return message;
-}
-```
-
-Application depends only on domain:
-
-```1:6:src/application/echo.ts
-import { normalizeEchoMessage, type EchoResult } from "../domain/echo.js";
-
-export function echoMessage(input: { message: unknown }): EchoResult {
-  const message = normalizeEchoMessage(input.message);
-  return { message };
-}
-```
+Domain ports and types live under each vertical slice (`src/places/domain/`, `src/health/domain/`) with no Express imports. Services depend on domain ports only (`src/places/service/places-service.ts`, `src/health/service/health-service.ts`).
 
 **4. Test HTTP with `supertest(app)`, not Fastify inject**
 
-HTTP adapter tests import `supertest`, build the app via `buildApp`, and issue requests without listening:
+HTTP adapter tests import `supertest`, build the app via `buildApp`, and issue requests without listening. Use `loadConfig` with test overrides (never raw `process.env` in tests):
 
-```1:18:tests/adapters/http/health.test.ts
-import { describe, expect, it } from "vitest";
-import request from "supertest";
-import { buildApp } from "../../../src/composition/build-app.js";
-import { loadEnv } from "../../../src/composition/env.js";
-import { createLogger } from "../../../src/composition/logger.js";
+```typescript
+import request from 'supertest';
+import { buildApp } from '../../../src/composition/build-app.js';
+import { loadConfig } from '../../../src/composition/config.js';
+import { createLogger } from '../../../src/shared/logging/logger.js';
 
-describe("GET /health", () => {
-  it("returns 200 ok", async () => {
-    const env = loadEnv({ LOG_LEVEL: "silent" });
-    const app = buildApp({
-      env,
-      logger: createLogger(env.LOG_LEVEL),
-    });
-    const response = await request(app).get("/health");
-    expect(response.status).toBe(200);
-    expect(response.body).toEqual({ status: "ok" });
-  });
-});
+const config = loadConfig({ LOG_LEVEL: 'silent', GOOGLE_API_KEY: 'test-key' });
+const logger = createLogger(config.log.level);
+const app = buildApp(config, logger);
+
+const response = await request(app).get('/health');
+expect(response.status).toBe(200);
 ```
-
-Echo tests follow the same pattern (`request(app()).post("/echo").send(...)` in `tests/adapters/http/echo.test.ts`).
 
 **5. Keep package and docs truthful**
 
 Committed stack: `express` (and `@types/express`) plus `supertest` for HTTP tests — not Fastify:
 
-```15:26:package.json
+```15:27:package.json
   "dependencies": {
     "express": "^5.1.0",
     "zod": "^3.25.76"
@@ -187,65 +130,55 @@ Committed stack: `express` (and `@types/express`) plus `supertest` for HTTP test
     "@types/node": "^22.17.0",
     "@types/supertest": "^6.0.3",
     "supertest": "^7.1.4",
-    "tsx": "^4.20.3",
-    "typescript": "^5.9.2",
-    "vitest": "^3.2.4"
-  }
 ```
 
-Project instructions state Express as the inbound adapter and forbid Express types in domain/application (`AGENTS.md` architecture map and Never list; `docs/architecture.md` layers and composition-root sections). When the HTTP library changes again, update code, tests, `package.json`, `AGENTS.md`, and `docs/architecture.md` in the same change so agents and humans do not resurrect Fastify patterns from stale docs.
+Project instructions state Express as the inbound adapter and forbid Express types in domain/service (`AGENTS.md` architecture map and Never list; `docs/architecture.md` layers and composition-root sections). When the HTTP library changes again, update code, tests, `package.json`, `AGENTS.md`, and `docs/architecture.md` in the same change so agents and humans do not resurrect Fastify patterns from stale docs.
 
 ## Why This Matters
 
-Hexagonal layout only pays off if the adapter boundary is real. If Express (or Fastify) types creep into `domain` / `application`, swapping or testing the transport becomes a rewrite instead of an adapter change. Choosing Express over Fastify is a local, reversible tooling decision; coupling domain logic to whichever library is current is not.
+Hexagonal layout only pays off if the adapter boundary is real. If Express (or Fastify) types creep into `domain` / `service`, swapping or testing the transport becomes a rewrite instead of an adapter change. Choosing Express over Fastify is a local, reversible tooling decision; coupling domain logic to whichever library is current is not.
 
 A shared `buildApp` + `supertest` path also prevents a common skeleton failure mode: production wiring and test wiring diverge, so “green” HTTP tests miss registration bugs. Aligning docs and `package.json` with Express prevents agents from scaffolding Fastify plugins, `app.inject`, or Fastify schemas from plan drafts or muscle memory after the stack settled on Express.
 
 ## When to Apply
 
-- Adding or changing HTTP routes, middleware, or validation in this skeleton.
+- Adding or changing HTTP routes, middleware, or validation in this service.
 - Writing or updating HTTP adapter tests (always `buildApp` + `supertest`, never a separate Fastify inject harness).
-- Extending features along the echo vertical: domain → application → `adapters/http` → register in `buildApp` → tests.
+- Extending features along a vertical slice: domain → service → adapter route → register in `buildApp` → tests.
 - Reconsidering or documenting HTTP-library choices (Express vs alternatives): treat the library as an adapter detail; do not invent outbound ports, persistence, or auth as part of a framework swap.
 - Updating agent/architecture docs after any HTTP-stack change so committed guidance matches `package.json` and source.
 
 ## Examples
 
-**Correct: Express stays in the adapter; use case is a plain function**
+**Correct: Express stays in the adapter; service is injected**
 
-Composition wires the real use case into the route registrar:
-
-```22:23:src/composition/build-app.ts
-  registerHealthRoutes(app);
-  registerEchoRoutes(app, { echo: echoMessage });
-```
-
-`EchoUseCase` is a function type returning domain `EchoResult`, not an Express handler (`src/adapters/http/echo-routes.ts`).
+Composition wires real services into route registrars (`src/composition/build-app.ts:22-23`). Route functions take `PlacesService` / `HealthService` ports, not Express handler types.
 
 **Correct: HTTP test drives the same app factory**
 
-```7:16:tests/adapters/http/echo.test.ts
-  function app() {
-    const env = loadEnv({ LOG_LEVEL: "silent" });
-    return buildApp({ env, logger: createLogger(env.LOG_LEVEL) });
+```9:17:src/main.ts
+  try {
+    config = loadConfig();
+    logger = createLogger(config.log.level);
+  } catch (error) {
+    createLogger('error').error('load config failed', { error: (error as Error).message });
+    process.exit(1);
   }
 
-  it("echoes a valid message", async () => {
-    const response = await request(app()).post("/echo").send({ message: "hi" });
-    expect(response.status).toBe(200);
-    expect(response.body).toEqual({ message: "hi" });
-  });
+  const app = buildApp(config, logger);
 ```
+
+Tests mirror this pattern with `loadConfig({ ... })` overrides instead of listening.
 
 **Incorrect (avoid): Fastify inject or dual registration**
 
 Do not introduce `fastify.inject` helpers, Fastify route plugins, or a test-only app that registers routes differently from `buildApp`. Do not add `fastify` to dependencies while docs claim Express — or leave Fastify wording in `AGENTS.md` / `docs/architecture.md` after the Express switch.
 
-**Incorrect (avoid): Express in domain/application**
+**Incorrect (avoid): Express in domain/service layers**
 
-Do not import `express`, `Request`, or `Response` under `src/domain/` or `src/application/`. Domain may expose portable signals (e.g. `EchoValidationError` with `statusCode`) that the adapter maps to HTTP responses; the adapter owns Express status/json calls.
+Do not import `express`, `Request`, or `Response` under `src/*/domain/` or `src/*/service/`. Adapters own HTTP status/json calls; services return domain results or throw domain errors.
 
 ## Related
 
-- No prior docs under `docs/solutions/` (first learning in this store).
+- [Bootstrap error logger for config load failures](../developer-experience/config-load-error-logging.md) — bootstrap logging before config is available; complements the `buildApp(config, logger)` contract here.
 - Plan decision recorded as KTD2 in `docs/plans/2026-08-11-001-feat-typescript-microservice-skeleton-plan.md`.
