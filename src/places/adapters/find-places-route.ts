@@ -30,7 +30,12 @@ export function registerPlacesRoutes(app: Express, placesService: PlacesService,
   app.post('/find-places', async (req: Request, res: Response) => {
     const parsedInput = findPlacesBodySchema.safeParse(req.body);
     if (!parsedInput.success) {
-      logger.warn('invalid request', { method: req.method, path: req.path, statusCode: 400 });
+      logger.warn('invalid request', {
+        method: req.method,
+        path: req.path,
+        statusCode: 400,
+        errors: parsedInput.error.errors
+      });
       res.status(400).json({
         error: 'invalid body: latitude, longitude, and radiusMeters are required'
       });
@@ -40,9 +45,10 @@ export function registerPlacesRoutes(app: Express, placesService: PlacesService,
     try {
       const places = await placesService.getPlaces(parsedInput.data);
       res.status(200).json({ places: places.map(toPlaceResponse) });
-    } catch {
-      logger.error('places search failed', { path: req.path });
+    } catch (error) {
+      logger.error('places search failed', { path: req.path, error: error });
       res.status(500).json({ error: 'places search unavailable' });
     }
   });
 }
+

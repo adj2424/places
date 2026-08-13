@@ -6,11 +6,16 @@ export class PlacesServiceImpl implements PlacesService {
   constructor(private readonly googlePlacesAdapter: GooglePlacesAdapter) {}
 
   async getPlaces(query: SearchQuery): Promise<GooglePlace[]> {
-    const places = await this.googlePlacesAdapter.getNearbyPlaces(query);
-    return places.filter(place => hasNoWebsite(place.websiteUri));
+    try {
+      const places = await this.googlePlacesAdapter.getNearbyPlaces(query);
+      return places.filter(place => hasNoWebsite(place.websiteUri));
+    } catch (error) {
+      throw new Error('places search failed', { cause: error });
+    }
   }
 }
 
 function hasNoWebsite(websiteUri: string | null | undefined): boolean {
   return websiteUri == null || websiteUri === '';
 }
+

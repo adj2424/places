@@ -13,39 +13,33 @@ export class GooglePlacesAdapter {
 
   async getNearbyPlaces(query: SearchQuery): Promise<GooglePlace[]> {
     const started = Date.now();
-
-    let response: Response;
-    try {
-      response = await fetch(`${this.config.baseUrl}/places:searchNearby`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Goog-Api-Key': this.config.apiKey,
-          'X-Goog-FieldMask': this.PLACES_NEARBY_FIELD_MASK
-        },
-        body: JSON.stringify({
-          maxResultCount: 20,
-          locationRestriction: {
-            circle: {
-              center: {
-                latitude: query.latitude,
-                longitude: query.longitude
-              },
-              radius: query.radiusMeters
-            }
+    const response = await fetch(`${this.config.baseUrl}v1/places:searchNearby`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Goog-Api-Key': this.config.apiKey,
+        'X-Goog-FieldMask': this.PLACES_NEARBY_FIELD_MASK
+      },
+      body: JSON.stringify({
+        maxResultCount: 20,
+        locationRestriction: {
+          circle: {
+            center: {
+              latitude: query.latitude,
+              longitude: query.longitude
+            },
+            radius: query.radiusMeters
           }
-        })
+        }
+      })
+    });
+    if (!response.ok) {
+      this.logger.error('google request returned non 200 status', {
+        durationMs: Date.now() - started,
+        statusCode: response.status,
+        body: JSON.stringify(await response.json())
       });
-      if (!response.ok) {
-        this.logger.error('google request returned non 200 status', {
-          durationMs: Date.now() - started,
-          statusCode: response.status
-        });
-        throw new Error('google request returned non 200 status');
-      }
-    } catch {
-      this.logger.error('google request failed', { durationMs: Date.now() - started });
-      throw new Error('google request failed');
+      throw new Error('google request returned non 200 status');
     }
 
     const data = (await response.json()) as GoogleNearbyResponse;
@@ -53,3 +47,4 @@ export class GooglePlacesAdapter {
     return data.places;
   }
 }
+
