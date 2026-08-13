@@ -46,8 +46,8 @@ export function registerPlacesRoutes(app: Express, placesService: PlacesService,
       const places = await placesService.getPlaces(parsedInput.data);
       res.status(200).json({ places: places.map(toPlaceResponse) });
     } catch (error) {
-      logger.error('places search failed', { path: req.path, error: error });
-      res.status(500).json({ error: 'places search unavailable' });
+      logger.error('error finding places', { error });
+      throw new Error('this would be a route error mapped from domain error - finding places');
     }
   });
 }

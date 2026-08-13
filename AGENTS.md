@@ -57,7 +57,7 @@ New functions live under `src/<name>/{domain,service,adapters}/`. Point at both 
 
 1. Domain — types / invariants under `src/<name>/domain/` (no framework imports).
 2. Service — use case under `src/<name>/service/` calling domain only.
-3. Adapters — inbound HTTP and outbound I/O under `src/<name>/adapters/` (validate at the HTTP edge; map errors to 4xx).
+3. Adapters — inbound HTTP and outbound I/O under `src/<name>/adapters/` (validate at the HTTP edge; map domain errors there: **400** validation, **502** upstream unavailability, **500** unexpected).
 4. Composition — register inside `buildApp` in `src/composition/build-app.ts` (same factory used by `src/main.ts` and tests: `buildApp(config, logger)`).
 5. Tests — service/domain tests under `tests/<name>/`; HTTP tests via `supertest` and `buildApp(config, logger)`.
 6. Verify — `npm run typecheck` and `npm test`.

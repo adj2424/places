@@ -27,6 +27,10 @@ A fixed-severity logger used at process entry when configuration is not yet avai
 ### Health
 Inbound probe on `GET /health` that reports service reachability plus a live Google Places connectivity/auth check. Feature validation failures must not by themselves make health unhealthy when Google Places would otherwise pass; missing/invalid Google credentials or a failed/timed-out Places check make health unhealthy.
 
+### Upstream unavailability
+The condition when Places Nearby Search cannot complete because Google returned 5xx, the request timed out, or the network failed. Find-places maps this to HTTP 502 with an opaque body. Distinct from Health’s unhealthy/503, which means this process cannot complete its Places connectivity/auth check.
+*Avoid:* echoing Google’s 503 to find-places callers; treating classified unavailability as a bug 500; conflating with invalid caller input
+
 ## Flagged ambiguities
 
 - "application" had been used for the use-case layer — the agreed name is service.

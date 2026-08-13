@@ -40,6 +40,16 @@ Do not re-register routes differently in tests.
 | `GET` | `/health` | Process + Google Places connectivity/auth (`{ "status": "ok" \| "unhealthy", "checks": { "googlePlaces": "ok" \| "fail" } }`); returns **503** when Google Places check fails |
 | `POST` | `/find-places` | Nearby no-website search — body `{ "latitude", "longitude", "radiusMeters" }` |
 
+Find-places HTTP errors (distinct from health **503**):
+
+| Status | When |
+|--------|------|
+| **400** | Zod-invalid caller body (in-route; no Google call) |
+| **502** | Upstream unavailability (Google 5xx, timeout, network) — opaque `{ "error": "places search unavailable" }` |
+| **500** | Unexpected failures (bugs, Google 4xx, malformed Google 2xx) — same opaque body as 502 |
+
+Do not echo Google's status to callers. Health **503** stays the probe's unhealthy signal; it is not the find-places unavailability status.
+
 ## Outbound adapters
 
 | Adapter | Location | Role |
