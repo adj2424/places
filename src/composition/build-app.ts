@@ -16,19 +16,14 @@ export function buildApp(config: Config, logger: Logger): Express {
   const healthLogger = logger.child({ component: 'health' });
   const placesLogger = logger.child({ component: 'places' });
 
-  const googlePlacesHealthCheck = new GooglePlacesHealthAdapter(
-    healthLogger.child({ adapter: 'google-health' })
-  );
+  const googlePlacesHealthCheck = new GooglePlacesHealthAdapter(healthLogger);
   const healthService = new HealthServiceImpl(googlePlacesHealthCheck);
 
-  const googlePlacesAdapter = new GooglePlacesAdapter(
-    config.google,
-    placesLogger.child({ adapter: 'google' })
-  );
+  const googlePlacesAdapter = new GooglePlacesAdapter(config.google, placesLogger);
   const placesService = new PlacesServiceImpl(googlePlacesAdapter);
 
-  registerHealthRoutes(app, healthService, healthLogger.child({ adapter: 'routes' }));
-  registerPlacesRoutes(app, placesService, placesLogger.child({ adapter: 'routes' }));
+  registerHealthRoutes(app, healthService, healthLogger);
+  registerPlacesRoutes(app, placesService, placesLogger);
 
   return app;
 }

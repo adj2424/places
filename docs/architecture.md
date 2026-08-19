@@ -28,8 +28,9 @@ outbound adapters (Google client, Places API)
 
 `buildApp(config, logger)` in `src/composition/build-app.ts` is the **single** registration path:
 
-- Process entry: `loadConfig()` → `buildApp(config, logger)` → `listen`
+- Process entry: `loadConfig()` → `createLogger` → `buildApp(config, logger)` → `listen`
 - Tests: `buildApp(config, logger)` → `supertest(app)` (no listen required)
+- Composition binds one Pino child per slice (`component: 'health'` / `'places'`) and passes that child into routes and outbound adapters. Adapters may create further children.
 
 Do not re-register routes differently in tests.
 

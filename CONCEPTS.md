@@ -21,8 +21,12 @@ The shared app factory that registers inbound adapters and returns an Express ap
 *Avoid:* separate “test-only” app wiring that re-registers routes differently
 
 ### Bootstrap logger
-A fixed-severity logger used at process entry when configuration is not yet available, so fatal startup failures (config validation, listen errors) still emit on stdout as Pino JSON before exit. Created with `createLogger('error')` because the configured log level cannot be read when parsing fails.
-*Avoid:* using the configured log level before config loads; passing callbacks or raw arrays as the logger extra argument
+A fixed-severity native Pino logger used at process entry when configuration is not yet available, so fatal startup failures (config validation, listen errors) still emit before exit. Created with `createLogger('error')` because the configured log level cannot be read when parsing fails. Config-load failure is logged Error-first with a message string (Pino's call shape). Local operator-facing output is colorized pretty, not JSON-on-stdout.
+*Avoid:* using the configured log level before config loads
+
+### Child logger
+A Pino child bound at composition with a slice `component` (`health` or `places`) and passed into that slice's routes and outbound adapters. Adapters may create further children. There is no second logging API.
+*Avoid:* inventing a custom logger port so children can be passed around; documenting composition-time `adapter` bindings that `buildApp` does not make
 
 ### Health
 Inbound probe on `GET /health` that reports service reachability plus a live Google Places connectivity/auth check. Feature validation failures must not by themselves make health unhealthy when Google Places would otherwise pass; missing/invalid Google credentials or a failed/timed-out Places check make health unhealthy.

@@ -1,7 +1,7 @@
 ---
 title: Prefer Express HTTP adapter over Fastify in TypeScript hexagonal microservice
 date: 2026-08-11
-last_refreshed: 2026-08-12
+last_refreshed: 2026-08-19
 category: tooling-decisions
 module: http-adapter
 problem_type: tooling_decision
@@ -43,20 +43,23 @@ Prefer Express as the HTTP adapter for this service, and keep hexagonal boundari
 
 `buildApp` is the only registration path. It constructs Express, applies JSON parsing, wires health and places services, registers their routes, and returns the app without listening:
 
-```11:25:src/composition/build-app.ts
+```11:28:src/composition/build-app.ts
 export function buildApp(config: Config, logger: Logger): Express {
   const app = express();
   app.disable('x-powered-by');
   app.use(express.json({ limit: '32kb' }));
 
-  const googlePlacesHealthCheck = new GooglePlacesHealthAdapter(logger);
+  const healthLogger = logger.child({ component: 'health' });
+  const placesLogger = logger.child({ component: 'places' });
+
+  const googlePlacesHealthCheck = new GooglePlacesHealthAdapter(healthLogger);
   const healthService = new HealthServiceImpl(googlePlacesHealthCheck);
 
-  const googlePlacesAdapter = new GooglePlacesAdapter(config.google, logger);
+  const googlePlacesAdapter = new GooglePlacesAdapter(config.google, placesLogger);
   const placesService = new PlacesServiceImpl(googlePlacesAdapter);
 
-  registerHealthRoutes(app, healthService, logger);
-  registerPlacesRoutes(app, placesService, logger);
+  registerHealthRoutes(app, healthService, healthLogger);
+  registerPlacesRoutes(app, placesService, placesLogger);
 
   return app;
 }
@@ -73,7 +76,7 @@ export function registerHealthRoutes(app: Express, healthService: HealthService,
   app.get('/health', async (_req, res) => {
     const result = await healthService.healthCheck();
     const statusCode = result === 'ok' ? 200 : 503;
-    logger.info('health check result', { status: result });
+    logger.info({ status: result }, 'health check result');
     res.status(statusCode).json({ status: result });
   });
 }
@@ -81,12 +84,20 @@ export function registerHealthRoutes(app: Express, healthService: HealthService,
 
 Validate request bodies at the HTTP edge (Zod), then call an injected service. Places maps Zod failures to 4xx without pulling Express into domain:
 
-```29:37:src/places/adapters/find-places-route.ts
+```29:45:src/places/adapters/find-places-route.ts
 export function registerPlacesRoutes(app: Express, placesService: PlacesService, logger: Logger): void {
   app.post('/find-places', async (req: Request, res: Response) => {
     const parsedInput = findPlacesBodySchema.safeParse(req.body);
     if (!parsedInput.success) {
-      logger.warn('invalid request', { method: req.method, path: req.path, statusCode: 400 });
+      logger.error(
+        {
+          method: req.method,
+          path: req.path,
+          statusCode: 400,
+          errors: parsedInput.error.errors
+        },
+        'invalid request'
+      );
       res.status(400).json({
         error: 'invalid body: latitude, longitude, and radiusMeters are required'
       });
@@ -161,7 +172,7 @@ Composition wires real services into route registrars (`src/composition/build-ap
     config = loadConfig();
     logger = createLogger(config.log.level);
   } catch (error) {
-    createLogger('error').error('load config failed', { error: (error as Error).message });
+    createLogger('error').error(error as Error, 'load config failed');
     process.exit(1);
   }
 

@@ -1,6 +1,7 @@
 ---
 title: Keep living docs aligned with hexagonal slices, not echo or skeleton recipes
 date: 2026-08-12
+last_refreshed: 2026-08-19
 category: documentation-gaps
 module: living-docs / hexagonal layout
 problem_type: documentation_gap
@@ -44,7 +45,7 @@ What living docs now say (quoted from the current files):
 - `CONCEPTS.md` Hexagonal layout: “domain and **service** stay free of HTTP/framework types.” (`CONCEPTS.md:7–8`)
 - `docs/architecture.md` HTTP surface is `/health` and `/find-places` only; health is described as Google Places connectivity/auth with a `googlePlaces` check. (`docs/architecture.md:36–41`)
 
-What composition actually wires today (`src/composition/build-app.ts:11–25`): Express JSON app; `GooglePlacesHealthAdapter` + `HealthServiceImpl` + `registerHealthRoutes`; `GooglePlacesAdapter` + `PlacesServiceImpl` + `registerPlacesRoutes`. No echo registration. No import of `src/shared/client/`.
+What composition actually wires today (`src/composition/build-app.ts:11–28`): Express JSON app; slice `component` child loggers (`health` / `places`) passed into adapters and routes; `GooglePlacesHealthAdapter` + `HealthServiceImpl` + `registerHealthRoutes`; `GooglePlacesAdapter` + `PlacesServiceImpl` + `registerPlacesRoutes`. No echo registration. No import of `src/shared/client/`.
 
 ## Guidance
 
@@ -129,16 +130,23 @@ From current `AGENTS.md`:
 5. Tests under `tests/<name>/`; HTTP via `supertest` and `buildApp(config, logger)`.
 6. Exemplars: **both** `src/health/` and `src/places/`. Wiring: `src/composition/build-app.ts`.
 
-`buildApp` today (`src/composition/build-app.ts:16–23`):
+`buildApp` today (`src/composition/build-app.ts:16–26`):
 
 ```typescript
-const googlePlacesHealthCheck = new GooglePlacesHealthAdapter(logger);
+const healthLogger = logger.child({ component: 'health' });
+const placesLogger = logger.child({ component: 'places' });
+
+const googlePlacesHealthCheck = new GooglePlacesHealthAdapter(healthLogger);
 const healthService = new HealthServiceImpl(googlePlacesHealthCheck);
-const googlePlacesAdapter = new GooglePlacesAdapter(config.google, logger);
+
+const googlePlacesAdapter = new GooglePlacesAdapter(config.google, placesLogger);
 const placesService = new PlacesServiceImpl(googlePlacesAdapter);
-registerHealthRoutes(app, healthService, logger);
-registerPlacesRoutes(app, placesService, logger);
+
+registerHealthRoutes(app, healthService, healthLogger);
+registerPlacesRoutes(app, placesService, placesLogger);
 ```
+
+Logger wiring detail: [Restate logger living docs when code diverges](./restate-logger-living-docs-when-code-diverges.md).
 
 ### Before: do not resurrect in living docs
 
@@ -160,4 +168,5 @@ registerPlacesRoutes(app, placesService, logger);
 ## Related
 
 - [Express HTTP adapter over Fastify (hexagonal)](../tooling-decisions/express-http-adapter-over-fastify-hexagonal.md) — inbound HTTP library choice; complementary, not a duplicate. Living docs win on layout recipe.
+- [Restate logger living docs when code diverges](./restate-logger-living-docs-when-code-diverges.md) — logger product restatement when live Pino diverges from CE docs; complements this layout recipe.
 - [Bootstrap error logger for config load failures](../developer-experience/config-load-error-logging.md) — `loadConfig` failure logging in `main.ts`; not a layout recipe.
