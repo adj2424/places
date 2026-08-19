@@ -6,7 +6,7 @@ export function registerHealthRoutes(app: Express, healthService: HealthService,
   app.get('/health', async (_req, res) => {
     const result = await healthService.healthCheck();
     const statusCode = result === 'ok' ? 200 : 503;
-    logger.info('health check result', { status: result });
+    logger.info({ status: result }, 'health check result');
     res.status(statusCode).json({ status: result });
   });
 }

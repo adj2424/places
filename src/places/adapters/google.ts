@@ -14,8 +14,14 @@ export class GooglePlacesAdapter {
 
   async getNearbyPlaces(query: SearchQuery): Promise<GooglePlace[]> {
     const started = Date.now();
-    const url = `${this.config.baseUrl}v1/places:searchNearby`;
+    const url = `${this.config.baseUrl}/places:searchNearby`;
+    const requestLogger = this.logger.child({
+      url,
+      method: 'POST'
+    });
+
     let response: Response;
+
     try {
       response = await fetch(url, {
         method: 'POST',
@@ -43,14 +49,14 @@ export class GooglePlacesAdapter {
     }
 
     if (!response.ok) {
-      this.logger.error('google request failed', { status: response.status, error: await response.json() });
+      const error = await response.json();
+      requestLogger.error({ status: response.status, error }, 'external google places api request failed');
       throw mapGoogleHttpStatusToError(response.status, Date.now() - started);
     }
 
     const data = (await response.json()) as GoogleNearbyResponse;
 
-    this.logger.info('google request successful');
+    requestLogger.info('google request successful');
     return data.places;
   }
 }
-

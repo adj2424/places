@@ -10,10 +10,13 @@ export const GOOGLE_ERROR_CODES = {
 
 export class GoogleError extends Error {
   readonly durationMs: number;
+  readonly name: string;
+  readonly message: string;
 
   constructor(message: string, durationMs: number) {
-    super(message);
+    super();
     this.name = 'GoogleError';
+    this.message = message;
     this.durationMs = durationMs;
   }
 }
@@ -78,4 +81,3 @@ export function mapGoogleHttpStatusToError(status: number, durationMs: number): 
       return new GoogleGenericError(durationMs);
   }
 }
-

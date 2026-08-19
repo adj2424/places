@@ -28,14 +28,14 @@ related_components:
 
 ## Context
 
-When `loadConfig()` fails during process bootstrap, the app must exit — but a bare `process.exit(1)` with no log line makes local diagnosis impossible. Missing or invalid env vars (for example `GOOGLE_API_KEY`) should produce a loud, structured error on stderr before the process dies.
+When `loadConfig()` fails during process bootstrap, the app must exit — but a bare `process.exit(1)` with no log line makes local diagnosis impossible. Missing or invalid env vars (for example `GOOGLE_API_KEY`) should produce a loud structured JSON line on stdout before the process dies.
 
 `loadConfig()` in `src/composition/config.ts` validates env with Zod and rethrows a plain `Error` whose message lists field paths and messages (`src/composition/config.ts:46-51`). `main.ts` catches that failure and logs it with a bootstrap logger before exiting (`src/main.ts:12-14`).
 
 Two constraints shape the solution:
 
 1. **Config is unavailable on failure** — `config.log.level` cannot be read when `loadConfig()` throws, so logging must use a fixed bootstrap level.
-2. **`Logger.error` expects a plain object** — the second argument is `extra?: Record<string, unknown>`, not a callback or a bare array (`src/shared/logging/logger.ts:13-17`, `src/shared/logging/logger.ts:29`).
+2. **`Logger.error` expects a plain object** — the second argument is `extra?: Record<string, unknown>`, not a callback or a bare array (`src/shared/logging/logger.ts`). The wrapper clones extras with `JSON.stringify` before passing them to Pino.
 
 ## Guidance
 
@@ -86,7 +86,7 @@ For structured log output (instead of a joined string), pass the mapped array in
 
 ### 3. Pass a `Record` to `logger.error`, never a callback or raw array
 
-`Logger.error` is typed as `(message: string, extra?: Record<string, unknown>) => void` (`src/shared/logging/logger.ts:15`). The `emit` helper JSON-stringifies `extra` when present (`src/shared/logging/logger.ts:29`).
+`Logger.error` is typed as `(message: string, extra?: Record<string, unknown>) => void` (`src/shared/logging/logger.ts`). The `createLogger` wrapper maps `(message, extra)` to Pino's object-first call and JSON-clones `extra` when present.
 
 **Correct** — wrap the errors array in an object:
 
@@ -117,7 +117,7 @@ Formatting and logging for the bootstrap failure path belong in `main.ts`'s catc
 
 ## Why This Matters
 
-- **Silent exits waste debugging time** — without a stderr line, a missing `.env` key looks like a hung or broken process.
+- **Silent exits waste debugging time** — without a stdout JSON line, a missing `.env` key looks like a hung or broken process.
 - **Unreadable Zod output hides the failing field** — `.format()` nests `_errors` arrays that are hard to scan in one-line JSON log output.
 - **Lost paths mislead fixes** — `.flatten()` collapses nested paths so `google.apiKey` may appear only as `google`.
 - **Logger contract is strict** — violating `Record<string, unknown>` fails at compile time; even if it compiled, a callback would never be invoked by `emit`.
@@ -163,10 +163,10 @@ import { z } from 'zod';
 }
 ```
 
-Emits a line like:
+Emits a Pino JSON line on stdout like:
 
-```
-error: load config failed {"errors":[{"field":"google.apiKey","message":"Required"}]}
+```json
+{"level":50,"time":...,"pid":...,"hostname":...,"msg":"load config failed","errors":[{"field":"google.apiKey","message":"Required"}]}
 ```
 
 ### Current shipped behavior
@@ -177,7 +177,7 @@ error: load config failed {"errors":[{"field":"google.apiKey","message":"Require
 
 | Approach | Why it failed |
 |----------|----------------|
-| **Zod `.format()`** | Produces nested `_errors` objects, e.g. `{"_errors":[],"google":{"_errors":[],"apiKey":{"_errors":["Required"]}}}` — unreadable in one-line JSON console output. |
+| **Zod `.format()`** | Produces nested `_errors` objects, e.g. `{"_errors":[],"google":{"_errors":[],"apiKey":{"_errors":["Required"]}}}` — unreadable in one-line JSON log output. |
 | **Zod `.flatten()`** | Flatter shape but loses full dotted paths; nested field `google.apiKey` may surface only under `google`. |
 | **Callback as `logger.error` 2nd arg** | `Logger.error` expects `Record<string, unknown>`, not `(error) => ({...})` — TypeScript rejects it. |
 | **Raw array as `logger.error` 2nd arg** | Arrays are not `Record<string, unknown>` — must wrap as `{ errors }`. |
@@ -189,5 +189,4 @@ error: load config failed {"errors":[{"field":"google.apiKey","message":"Require
 - [Express HTTP adapter over Fastify (hexagonal)](../tooling-decisions/express-http-adapter-over-fastify-hexagonal.md) — tangential overlap on Zod at route boundary and logger wiring in tests; does not cover config bootstrap logging.
 - `src/main.ts:5-15` — bootstrap try/catch and exit
 - `src/composition/config.ts:32-52` — Zod parse and issue-to-message mapping
-- `src/shared/logging/logger.ts:13-17` — `Logger` type and `extra` contract
-- `src/shared/logging/logger.ts:29` — `JSON.stringify(extra)` emission
+- `src/shared/logging/logger.ts` — `Logger` type, `createLogger`, and Pino-backed `extra` cloning

@@ -13,14 +13,22 @@ export function buildApp(config: Config, logger: Logger): Express {
   app.disable('x-powered-by');
   app.use(express.json({ limit: '32kb' }));
 
-  const googlePlacesHealthCheck = new GooglePlacesHealthAdapter(logger);
+  const healthLogger = logger.child({ component: 'health' });
+  const placesLogger = logger.child({ component: 'places' });
+
+  const googlePlacesHealthCheck = new GooglePlacesHealthAdapter(
+    healthLogger.child({ adapter: 'google-health' })
+  );
   const healthService = new HealthServiceImpl(googlePlacesHealthCheck);
 
-  const googlePlacesAdapter = new GooglePlacesAdapter(config.google, logger);
+  const googlePlacesAdapter = new GooglePlacesAdapter(
+    config.google,
+    placesLogger.child({ adapter: 'google' })
+  );
   const placesService = new PlacesServiceImpl(googlePlacesAdapter);
 
-  registerHealthRoutes(app, healthService, logger);
-  registerPlacesRoutes(app, placesService, logger);
+  registerHealthRoutes(app, healthService, healthLogger.child({ adapter: 'routes' }));
+  registerPlacesRoutes(app, placesService, placesLogger.child({ adapter: 'routes' }));
 
   return app;
 }

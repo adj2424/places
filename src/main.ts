@@ -10,7 +10,7 @@ async function main(): Promise<void> {
     config = loadConfig();
     logger = createLogger(config.log.level);
   } catch (error) {
-    createLogger('error').error('load config failed', { error: (error as Error).message });
+    logger = createLogger('error').error(error as Error, 'load config failed');
     process.exit(1);
   }
 
@@ -18,11 +18,11 @@ async function main(): Promise<void> {
 
   await new Promise<void>((resolve, reject) => {
     const server = app.listen(config.server.port, () => {
-      logger.info('listening', { port: config.server.port });
+      logger.info({ port: config.server.port }, 'listening');
       resolve();
     });
     server.on('error', (error: Error) => {
-      logger.error('startup failed', { reason: error });
+      logger.error('startup failed');
       reject(error);
     });
   });

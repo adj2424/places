@@ -21,7 +21,7 @@ The shared app factory that registers inbound adapters and returns an Express ap
 *Avoid:* separate “test-only” app wiring that re-registers routes differently
 
 ### Bootstrap logger
-A fixed-severity logger used at process entry when configuration is not yet available, so fatal startup failures (config validation, listen errors) still emit on stderr before exit. Created with a hard-coded error level because the configured log level cannot be read when parsing fails.
+A fixed-severity logger used at process entry when configuration is not yet available, so fatal startup failures (config validation, listen errors) still emit on stdout as Pino JSON before exit. Created with `createLogger('error')` because the configured log level cannot be read when parsing fails.
 *Avoid:* using the configured log level before config loads; passing callbacks or raw arrays as the logger extra argument
 
 ### Health
