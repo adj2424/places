@@ -37,12 +37,12 @@ export function registerPlacesRoutes(app: Express, placesService: PlacesService,
           method: req.method,
           path: req.path,
           statusCode: 400,
-          errors: parsedInput.error.errors
+          errors: parsedInput.error.issues
         },
         'invalid request'
       );
       res.status(400).json({
-        error: 'invalid body: latitude, longitude, and radiusMeters are required'
+        error: parsedInput.error.issues
       });
       return;
     }
