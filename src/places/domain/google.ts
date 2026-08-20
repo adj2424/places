@@ -1,17 +1,13 @@
 export type GooglePlace = {
   id: string;
-  displayName?: { text: string };
+  types?: string[];
+  primaryType?: string;
+  displayName?: { text: string; languageCode: string };
   formattedAddress?: string;
   nationalPhoneNumber?: string;
   websiteUri?: string;
 };
 
-export type GoogleNearbyResponse = {
+export type GooglePlacesResponse = {
   places: GooglePlace[];
-};
-
-export type SearchQuery = {
-  latitude: number;
-  longitude: number;
-  radiusMeters: number;
 };

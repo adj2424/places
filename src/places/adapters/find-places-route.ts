@@ -1,34 +1,36 @@
 import type { Express, Request, Response } from 'express';
 import { z } from 'zod';
 import type { Logger } from '../../shared/logging/logger.js';
-import type { GooglePlace, SearchQuery } from '../domain/google.js';
+import type { GooglePlace } from '../domain/google.js';
 import type { PlacesService } from '../domain/port.js';
 
-const findPlacesBodySchema = z.object({
+type FindPlacesRequest = {
+  latitude: number;
+  longitude: number;
+  radiusMeters: number;
+};
+
+type FindPlacesResponse = {
+  places: {
+    id: string;
+    name?: string;
+    address?: string;
+    phone?: string;
+    types?: string[];
+    primaryType?: string;
+  }[];
+  total: number;
+};
+
+const findPlacesRequestSchema = z.object({
   latitude: z.number().finite().min(-90).max(90),
   longitude: z.number().finite().min(-180).max(180),
   radiusMeters: z.number().finite().positive().max(50000)
-}) satisfies z.ZodType<SearchQuery>;
-
-export type PlaceResponse = {
-  id: string;
-  name: string | null;
-  address: string | null;
-  phone: string | null;
-};
-
-function toPlaceResponse(place: GooglePlace): PlaceResponse {
-  return {
-    id: place.id,
-    name: place.displayName?.text ?? null,
-    address: place.formattedAddress ?? null,
-    phone: place.nationalPhoneNumber ?? null
-  };
-}
+}) satisfies z.ZodType<FindPlacesRequest>;
 
 export function registerPlacesRoutes(app: Express, placesService: PlacesService, logger: Logger): void {
   app.post('/find-places', async (req: Request, res: Response) => {
-    const parsedInput = findPlacesBodySchema.safeParse(req.body);
+    const parsedInput = findPlacesRequestSchema.safeParse(req.body);
     if (!parsedInput.success) {
       logger.error(
         {
@@ -46,11 +48,26 @@ export function registerPlacesRoutes(app: Express, placesService: PlacesService,
     }
 
     try {
-      const places = await placesService.getPlaces(parsedInput.data);
-      res.status(200).json({ places: places.map(toPlaceResponse) });
+      const { latitude, longitude, radiusMeters } = parsedInput.data;
+      const places = await placesService.getPlaces(latitude, longitude, radiusMeters);
+      const response = mapFindPlacesResponse(places);
+      res.status(200).json(response);
+      logger.info('found places with no website successfully');
     } catch (error) {
       logger.error({ error }, 'error finding places');
       throw new Error('this would be a route error mapped from domain error - finding places');
     }
   });
+}
+
+function mapFindPlacesResponse(places: GooglePlace[]): FindPlacesResponse {
+  const ret = places.map(place => ({
+    id: place.id,
+    name: place.displayName?.text,
+    address: place.formattedAddress,
+    phone: place.nationalPhoneNumber,
+    types: place.types,
+    primaryType: place.primaryType
+  }));
+  return { places: ret, total: places.length };
 }

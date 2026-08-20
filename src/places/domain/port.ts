@@ -1,5 +1,5 @@
-import type { GooglePlace, SearchQuery } from './google.js';
+import type { GooglePlace } from './google.js';
 
 export interface PlacesService {
-  getPlaces(query: SearchQuery): Promise<GooglePlace[]>;
+  getPlaces(latitude: number, longitude: number, radiusMeters: number): Promise<GooglePlace[]>;
 }
