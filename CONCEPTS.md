@@ -35,6 +35,21 @@ Inbound probe on `GET /health` that reports service reachability plus a live Goo
 The condition when Places Nearby Search cannot complete because Google returned 5xx, the request timed out, or the network failed. Find-places maps this to HTTP 502 with an opaque body. Distinct from Health’s unhealthy/503, which means this process cannot complete its Places connectivity/auth check.
 *Avoid:* echoing Google’s 503 to find-places callers; treating classified unavailability as a bug 500; conflating with invalid caller input
 
+## Places
+
+### Nearby place
+A Google Nearby Search result as this service models it: a stable place id plus optional display fields (name, address, phone, types, website, and Google’s primaryType for that place). After search, website emptiness is the product inclusion gate — places with a website are dropped.
+*Avoid:* treating name/address/phone presence as an inclusion rule
+
+### Primary type
+A coarse category key owned by this service (foodAndDrink, shopping, and siblings). Callers send these keys to narrow nearby search. Distinct from Google’s type strings and from the optional primaryType field on a returned nearby place.
+*Avoid:* treating a Google type string such as restaurant as a request category key
+
+### Primary type catalog
+The domain map from each primary type to the Google Nearby Search type strings that category expands to. HTTP allow-lists follow the catalog keys; the outbound adapter flattens selected keys into Google’s included-types field.
+*Avoid:* duplicating the type lists in the HTTP route or the use case
+
 ## Flagged ambiguities
 
 - "application" had been used for the use-case layer — the agreed name is service.
+- "primaryType" on a returned nearby place is Google’s classification of that place; Primary type (this glossary) is a request-time category key.

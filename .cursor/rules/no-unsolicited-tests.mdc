@@ -1,0 +1,12 @@
+---
+description: Do not create tests unless the user explicitly asks
+alwaysApply: true
+---
+
+# No unsolicited tests
+
+Do not create, add, expand, or rewrite test files unless the user explicitly asked for tests in that request.
+
+Help, fixes, and features mean production code only. Do not add a test “to be complete,” to prove a change, or because the feature recipe historically ended with tests.
+
+If the user wants tests, they will say so (e.g. “add a test”, “cover this”, “write HTTP tests”).

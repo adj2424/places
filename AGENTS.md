@@ -24,7 +24,7 @@ npm run dev
 | Shared logging | `src/shared/logging/` |
 | Config + `buildApp` wiring | `src/composition/` |
 | Process listen entry | `src/main.ts` |
-| Documented solutions | `docs/solutions/` — past problems and patterns; snapshots. Living docs plus composition win on layout. |
+| Documented solutions | `docs/solutions/` — past problems and patterns organized by category with YAML frontmatter (`module`, `tags`, `problem_type`); snapshots. Living docs plus composition win on layout. |
 | Shared vocabulary | `CONCEPTS.md` |
 | Tests | `tests/<slice>/` for service/domain; HTTP via `supertest` and `buildApp(config, logger)` |
 
@@ -34,8 +34,8 @@ Dependency rule: `domain` and `service` never import Express or other adapter SD
 
 **Always**
 
-- Add features as domain → service → adapters → `buildApp` → tests.
-- Run `typecheck` and `test` before claiming done.
+- Add features as domain → service → adapters → `buildApp`.
+- Run `typecheck` and existing `test` before claiming done.
 - Update this file in the same change if layout or scripts change.
 - Bind locally by default (`HOST=127.0.0.1`); do not log request bodies by default.
 
@@ -43,9 +43,11 @@ Dependency rule: `domain` and `service` never import Express or other adapter SD
 
 - Adding additional outbound ports beyond the approved Google Places adapter, persistence, auth, queues, or deploy tooling.
 - Exposing the service beyond local use (needs a follow-up auth plan).
+- Creating, expanding, or rewriting tests.
 
 **Never**
 
+- Create, add, expand, or rewrite test files unless the user explicitly asked for tests in that request. Help means change production code; do not “complete” the work with a new test.
 - Put Express / HTTP types in `domain` or `service`.
 - Invent empty `repository` / persistence folders “for later.”
 - Rely on `.cursor/rules` or chat history as the source of truth.
@@ -59,8 +61,8 @@ New functions live under `src/<name>/{domain,service,adapters}/`. Point at both 
 2. Service — use case under `src/<name>/service/` calling domain only.
 3. Adapters — inbound HTTP and outbound I/O under `src/<name>/adapters/` (validate at the HTTP edge; map domain errors there: **400** validation, **502** upstream unavailability, **500** unexpected).
 4. Composition — register inside `buildApp` in `src/composition/build-app.ts` (same factory used by `src/main.ts` and tests: `buildApp(config, logger)`).
-5. Tests — service/domain tests under `tests/<name>/`; HTTP tests via `supertest` and `buildApp(config, logger)`.
-6. Verify — `npm run typecheck` and `npm test`.
+5. Tests — only if the user asked. Service/domain under `tests/<name>/`; HTTP via `supertest` and `buildApp(config, logger)`.
+6. Verify — `npm run typecheck` and `npm test` (run existing tests; do not add new ones to make this step exist).
 
 Exemplar references:
 
