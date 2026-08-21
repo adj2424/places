@@ -1,13 +1,14 @@
 import type { Express, Request, Response } from 'express';
 import { z } from 'zod';
 import type { Logger } from '../../shared/logging/logger.js';
-import type { GooglePlace } from '../domain/google.js';
+import { PrimaryTypes, type GooglePlace, type PrimaryType } from '../domain/google.js';
 import type { PlacesService } from '../domain/port.js';
 
 type FindPlacesRequest = {
   latitude: number;
   longitude: number;
   radiusMeters: number;
+  primaryTypes?: PrimaryType[];
 };
 
 type FindPlacesResponse = {
@@ -25,7 +26,8 @@ type FindPlacesResponse = {
 const findPlacesRequestSchema = z.object({
   latitude: z.number().finite().min(-90).max(90),
   longitude: z.number().finite().min(-180).max(180),
-  radiusMeters: z.number().finite().positive().max(50000)
+  radiusMeters: z.number().finite().positive().max(50000),
+  primaryTypes: z.array(z.enum(Object.keys(PrimaryTypes) as [PrimaryType, ...PrimaryType[]])).optional()
 }) satisfies z.ZodType<FindPlacesRequest>;
 
 export function registerPlacesRoutes(app: Express, placesService: PlacesService, logger: Logger): void {
@@ -48,8 +50,8 @@ export function registerPlacesRoutes(app: Express, placesService: PlacesService,
     }
 
     try {
-      const { latitude, longitude, radiusMeters } = parsedInput.data;
-      const places = await placesService.getPlaces(latitude, longitude, radiusMeters);
+      const { latitude, longitude, radiusMeters, primaryTypes } = parsedInput.data;
+      const places = await placesService.getPlaces(latitude, longitude, radiusMeters, primaryTypes ?? []);
       const response = mapFindPlacesResponse(places);
       res.status(200).json(response);
       logger.info('found places with no website successfully');

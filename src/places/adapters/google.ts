@@ -2,7 +2,7 @@ import { z } from 'zod';
 import type { GoogleConfig } from '../../composition/config.js';
 import type { Logger } from '../../shared/logging/logger.js';
 import { GoogleGenericError, mapGoogleHttpStatusToError } from '../domain/errors.js';
-import type { GooglePlacesResponse, GooglePlace } from '../domain/google.js';
+import { type GooglePlacesResponse, type GooglePlace, type PrimaryType, PrimaryTypes } from '../domain/google.js';
 
 const googlePlaceSchema = z.object({
   id: z.string(),
@@ -15,7 +15,7 @@ const googlePlaceSchema = z.object({
 }) satisfies z.ZodType<GooglePlace>;
 
 const googlePlacesResponseSchema = z.object({
-  places: z.array(googlePlaceSchema)
+  places: z.array(googlePlaceSchema).optional()
 }) satisfies z.ZodType<GooglePlacesResponse>;
 
 export class GooglePlacesAdapter {
@@ -27,7 +27,12 @@ export class GooglePlacesAdapter {
     private readonly logger: Logger
   ) {}
 
-  async getPlaces(latitude: number, longitude: number, radiusMeters: number): Promise<GooglePlace[]> {
+  async getPlaces(
+    latitude: number,
+    longitude: number,
+    radiusMeters: number,
+    primaryTypes: PrimaryType[]
+  ): Promise<GooglePlace[]> {
     const started = Date.now();
     const url = `${this.config.baseUrl}/places:searchNearby`;
     const requestLogger = this.logger.child({
@@ -37,16 +42,18 @@ export class GooglePlacesAdapter {
 
     let response: Response;
 
+    requestLogger.info({ latitude, longitude, radiusMeters, primaryTypes }, 'google search request');
+
     try {
       response = await fetch(url, {
         method: 'POST',
-        signal: AbortSignal.timeout(10_000),
         headers: {
           'Content-Type': 'application/json',
           'X-Goog-Api-Key': this.config.apiKey,
           'X-Goog-FieldMask': this.PLACES_NEARBY_FIELD_MASK
         },
         body: JSON.stringify({
+          includedPrimaryTypes: primaryTypes.flatMap(primaryType => PrimaryTypes[primaryType]),
           locationRestriction: {
             circle: {
               center: {
@@ -76,7 +83,7 @@ export class GooglePlacesAdapter {
       throw new GoogleGenericError(Date.now() - started);
     }
 
-    requestLogger.info({ latitude, longitude, radiusMeters }, 'google search request successful');
-    return parsed.data.places;
+    requestLogger.info('google search request successful');
+    return parsed.data.places ?? ([] as GooglePlace[]);
   }
 }
