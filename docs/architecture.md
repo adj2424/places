@@ -13,7 +13,7 @@ feature adapters (Express routes under src/health/, src/places/, …)
     ↓
 service / domain (per slice)
     ↓
-outbound adapters (Google client, Places API)
+outbound adapters (Google client, Places Nearby Search, Geocoding)
 ```
 
 `composition/` loads config, constructs services, and builds the Express app. `main.ts` only listens.
@@ -39,15 +39,15 @@ Do not re-register routes differently in tests.
 | Method | Path | Role |
 |--------|------|------|
 | `GET` | `/health` | Process + Google Places connectivity/auth (`{ "status": "ok" \| "unhealthy", "checks": { "googlePlaces": "ok" \| "fail" } }`); returns **503** when Google Places check fails |
-| `POST` | `/find-places` | Nearby no-website search — body `{ "latitude", "longitude", "radiusMeters" }` |
+| `POST` | `/find-places` | Nearby no-website search. Geo mode: `{ "latitude", "longitude", "radiusMeters" }` with no request address. Address mode: non-empty `"address"` plus `"radiusMeters"` (no lat/lng); geocodes then Nearby Search. Mixed or neither is **400** |
 
 Find-places HTTP errors (distinct from health **503**):
 
 | Status | When |
 |--------|------|
-| **400** | Zod-invalid caller body (in-route; no Google call) |
-| **502** | Upstream unavailability (Google 5xx, timeout, network) — opaque `{ "error": "places search unavailable" }` |
-| **500** | Unexpected failures (bugs, Google 4xx, malformed Google 2xx) — same opaque body as 502 |
+| **400** | Invalid caller body: Zod at the HTTP edge (no Google call), or unmatched/ambiguous/partial geocode after Geocoding — `{ "error": issue array }` |
+| **502** | Upstream unavailability (Places or Geocoding 5xx, timeout, network; Geocoding `OVER_QUERY_LIMIT` / `UNKNOWN_ERROR`) — opaque `{ "error": "places search unavailable" }` |
+| **500** | Unexpected failures (bugs, Places 4xx, malformed Places 2xx, Geocoding `REQUEST_DENIED` / `OVER_DAILY_LIMIT` / unlisted status / missing location) — same opaque body as 502 |
 
 Do not echo Google's status to callers. Health **503** stays the probe's unhealthy signal; it is not the find-places unavailability status.
 
@@ -57,6 +57,7 @@ Do not echo Google's status to callers. Health **503** stays the probe's unhealt
 |---------|----------|------|
 | Google HTTP client | `src/shared/client/client.ts` | Shared `fetch` + API key + field mask (GET/POST) |
 | Google Places nearby search | `src/places/adapters/google.ts` | `searchNearby` for find-places |
+| Google Geocoding v3 | `src/places/adapters/geocoding.ts` | Address → unique lat/lng origin for find-places address mode; hardcoded `maps.googleapis.com` (does not use `GOOGLE_BASE_URL`) |
 | Google Places health ping | `src/health/adapters/google-health.ts` | Place Details GET for `/health` connectivity/auth |
 
 Composition wires health and find-places services in `buildApp`.
@@ -71,10 +72,11 @@ Validation for find-places lives at the HTTP edge (Zod).
 
 ## Config
 
-Zod-validated config in `src/composition/config.ts` (`PORT`, `LOG_LEVEL`, optional `GOOGLE_PLACES_API_KEY`, `GOOGLE_BASE_URL`). Ban raw `process.env` outside that module. Ship `.env.example`; keep `.env` gitignored. `npm test` does not require a Google key.
+Zod-validated config in `src/composition/config.ts` (`PORT`, `LOG_LEVEL`, `GOOGLE_API_KEY`, `GOOGLE_BASE_URL`). Ban raw `process.env` outside that module. Ship `.env.example`; keep `.env` gitignored. `GOOGLE_BASE_URL` is the Places host only; Geocoding uses a hardcoded Maps host. Address mode needs Geocoding API enabled on the same `GOOGLE_API_KEY`. `npm test` does not require a Google key.
 
 ## Health probe notes
 
 - Every `/health` request performs a live Place Details ping (no cache in v1).
 - Missing or invalid API key yields unhealthy `/health`.
 - Place Details must be enabled for the same Google Cloud project/key as Nearby Search; otherwise health may report fail while other APIs work.
+- Health does not probe Geocoding. A Places-restricted key can leave geo mode and `/health` succeeding while address mode fails.

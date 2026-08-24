@@ -63,6 +63,36 @@ export class GoogleGenericError extends GoogleError {
   }
 }
 
+export class GeocodeInvalidAddressError extends Error {
+  readonly durationMs: number;
+
+  constructor(durationMs: number) {
+    super('geocode invalid address');
+    this.name = 'GeocodeInvalidAddressError';
+    this.durationMs = durationMs;
+  }
+}
+
+export class GeocodeUnavailableError extends Error {
+  readonly durationMs: number;
+
+  constructor(durationMs: number) {
+    super('geocode unavailable');
+    this.name = 'GeocodeUnavailableError';
+    this.durationMs = durationMs;
+  }
+}
+
+export class GeocodeUnexpectedError extends Error {
+  readonly durationMs: number;
+
+  constructor(durationMs: number) {
+    super('geocode unexpected');
+    this.name = 'GeocodeUnexpectedError';
+    this.durationMs = durationMs;
+  }
+}
+
 export function mapGoogleHttpStatusToError(status: number, durationMs: number): GoogleError {
   switch (status) {
     case GOOGLE_ERROR_CODES.INVALID_ARGUMENT:

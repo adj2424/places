@@ -4,6 +4,7 @@ import { HealthServiceImpl } from '../health/service/health-service.js';
 import { registerPlacesRoutes } from '../places/adapters/find-places-route.js';
 import { GooglePlacesHealthAdapter } from '../health/adapters/google-health.js';
 import { GooglePlacesAdapter } from '../places/adapters/google.js';
+import { GoogleGeocodingAdapter } from '../places/adapters/geocoding.js';
 import { PlacesServiceImpl } from '../places/service/places-service.js';
 import type { Config } from './config.js';
 import type { Logger } from '../shared/logging/logger.js';
@@ -20,7 +21,8 @@ export function buildApp(config: Config, logger: Logger): Express {
   const healthService = new HealthServiceImpl(googlePlacesHealthCheck);
 
   const googlePlacesAdapter = new GooglePlacesAdapter(config.google, placesLogger);
-  const placesService = new PlacesServiceImpl(googlePlacesAdapter);
+  const geocodingAdapter = new GoogleGeocodingAdapter(config.google, placesLogger);
+  const placesService = new PlacesServiceImpl(googlePlacesAdapter, geocodingAdapter);
 
   registerHealthRoutes(app, healthService, healthLogger);
   registerPlacesRoutes(app, placesService, placesLogger);

@@ -16,17 +16,17 @@ npm run dev
 
 ## Architecture map
 
-| Concern | Location |
-|---------|----------|
-| Health slice | `src/health/` |
-| Places slice | `src/places/` |
-| Shared Google HTTP client (intended) | `src/shared/client/` |
-| Shared logging | `src/shared/logging/` |
-| Config + `buildApp` wiring | `src/composition/` |
-| Process listen entry | `src/main.ts` |
-| Documented solutions | `docs/solutions/` — past problems and patterns organized by category with YAML frontmatter (`module`, `tags`, `problem_type`); snapshots. Living docs plus composition win on layout. |
-| Shared vocabulary | `CONCEPTS.md` |
-| Tests | `tests/<slice>/` for service/domain; HTTP via `supertest` and `buildApp(config, logger)` |
+| Concern                              | Location                                                                                                                                                                              |
+| ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Health slice                         | `src/health/`                                                                                                                                                                         |
+| Places slice                         | `src/places/`                                                                                                                                                                         |
+| Shared Google HTTP client (intended) | `src/shared/client/`                                                                                                                                                                  |
+| Shared logging                       | `src/shared/logging/`                                                                                                                                                                 |
+| Config + `buildApp` wiring           | `src/composition/`                                                                                                                                                                    |
+| Process listen entry                 | `src/main.ts`                                                                                                                                                                         |
+| Documented solutions                 | `docs/solutions/` — past problems and patterns organized by category with YAML frontmatter (`module`, `tags`, `problem_type`); snapshots. Living docs plus composition win on layout. |
+| Shared vocabulary                    | `CONCEPTS.md`                                                                                                                                                                         |
+| Tests                                | `tests/<slice>/` for service/domain; HTTP via `supertest` and `buildApp(config, logger)`                                                                                              |
 
 Dependency rule: `domain` and `service` never import Express or other adapter SDKs. HTTP is an inbound adapter only. Layers, HTTP surface, outbound adapters, and config: [docs/architecture.md](./docs/architecture.md).
 
@@ -41,7 +41,7 @@ Dependency rule: `domain` and `service` never import Express or other adapter SD
 
 **Ask first**
 
-- Adding additional outbound ports beyond the approved Google Places adapter, persistence, auth, queues, or deploy tooling.
+- Adding additional outbound ports beyond the approved Google Places Nearby Search and Geocoding adapters, persistence, auth, queues, or deploy tooling.
 - Exposing the service beyond local use (needs a follow-up auth plan).
 - Creating, expanding, or rewriting tests.
 
