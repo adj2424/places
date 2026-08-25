@@ -8,106 +8,119 @@ export const GOOGLE_ERROR_CODES = {
   UNAVAILABLE: 503
 } as const;
 
-export class GoogleError extends Error {
+export class GooglePlacesError extends Error {
   readonly durationMs: number;
   readonly name: string;
   readonly message: string;
 
   constructor(message: string, durationMs: number) {
     super();
-    this.name = 'GoogleError';
+    this.name = 'GooglePlacesError';
     this.message = message;
     this.durationMs = durationMs;
   }
 }
 
-export class GoogleInvalidArgumentError extends GoogleError {
+export class InvalidArgumentError extends GooglePlacesError {
   constructor(durationMs: number) {
     super('google invalid argument', durationMs);
   }
 }
 
-export class GoogleUnauthenticatedError extends GoogleError {
+export class UnauthenticatedError extends GooglePlacesError {
   constructor(durationMs: number) {
     super('google unauthenticated', durationMs);
   }
 }
 
-export class GooglePermissionDeniedError extends GoogleError {
+export class PermissionDeniedError extends GooglePlacesError {
   constructor(durationMs: number) {
     super('google permission denied', durationMs);
   }
 }
 
-export class GoogleNotFoundError extends GoogleError {
+export class NotFoundError extends GooglePlacesError {
   constructor(durationMs: number) {
     super('google not found', durationMs);
   }
 }
 
-export class GoogleResourceExhaustedError extends GoogleError {
+export class ResourceExhaustedError extends GooglePlacesError {
   constructor(durationMs: number) {
     super('google resource exhausted', durationMs);
   }
 }
 
-export class GoogleUnavailableError extends GoogleError {
+export class UnavailableError extends GooglePlacesError {
   constructor(durationMs: number) {
     super('google service unavailable', durationMs);
   }
 }
 
-export class GoogleGenericError extends GoogleError {
+export class GenericError extends GooglePlacesError {
   constructor(durationMs: number) {
     super('google generic error', durationMs);
   }
 }
 
-export class GeocodeInvalidAddressError extends Error {
+export class GoogleGeocodeError extends Error {
   readonly durationMs: number;
+  readonly name: string;
+  readonly message: string;
 
-  constructor(durationMs: number) {
-    super('geocode invalid address');
-    this.name = 'GeocodeInvalidAddressError';
+  constructor(message: string, durationMs: number) {
+    super();
+    this.name = 'GoogleGeocodeError';
+    this.message = message;
     this.durationMs = durationMs;
   }
 }
 
-export class GeocodeUnavailableError extends Error {
-  readonly durationMs: number;
-
+export class GeocodeInvalidAddressError extends GoogleGeocodeError {
   constructor(durationMs: number) {
-    super('geocode unavailable');
-    this.name = 'GeocodeUnavailableError';
-    this.durationMs = durationMs;
+    super('google geocoding invalid address', durationMs);
   }
 }
 
-export class GeocodeUnexpectedError extends Error {
-  readonly durationMs: number;
-
+export class GeocodeUnavailableError extends GoogleGeocodeError {
   constructor(durationMs: number) {
-    super('geocode unexpected');
-    this.name = 'GeocodeUnexpectedError';
-    this.durationMs = durationMs;
+    super('google geocoding service unavailable', durationMs);
   }
 }
 
-export function mapGoogleHttpStatusToError(status: number, durationMs: number): GoogleError {
+export class GeocodeUnexpectedError extends GoogleGeocodeError {
+  constructor(durationMs: number) {
+    super('google geocoding unexpected error', durationMs);
+  }
+}
+
+export class GeocodeInvalidResponseError extends GoogleGeocodeError {
+  constructor(durationMs: number) {
+    super('google geocoding invalid response', durationMs);
+  }
+}
+
+export class GeocodeResourceExhaustedError extends GoogleGeocodeError {
+  constructor(durationMs: number) {
+    super('google geocoding resource exhausted', durationMs);
+  }
+}
+
+export function mapGoogleHttpStatusToError(status: number, durationMs: number): GooglePlacesError {
   switch (status) {
     case GOOGLE_ERROR_CODES.INVALID_ARGUMENT:
-      return new GoogleInvalidArgumentError(durationMs);
+      return new InvalidArgumentError(durationMs);
     case GOOGLE_ERROR_CODES.UNAUTHENTICATED:
-      return new GoogleUnauthenticatedError(durationMs);
+      return new UnauthenticatedError(durationMs);
     case GOOGLE_ERROR_CODES.PERMISSION_DENIED:
-      return new GooglePermissionDeniedError(durationMs);
+      return new PermissionDeniedError(durationMs);
     case GOOGLE_ERROR_CODES.NOT_FOUND:
-      return new GoogleNotFoundError(durationMs);
+      return new NotFoundError(durationMs);
     case GOOGLE_ERROR_CODES.RESOURCE_EXHAUSTED:
-      return new GoogleResourceExhaustedError(durationMs);
+      return new ResourceExhaustedError(durationMs);
     case GOOGLE_ERROR_CODES.UNAVAILABLE:
-      return new GoogleUnavailableError(durationMs);
+      return new UnavailableError(durationMs);
     default:
-      return new GoogleGenericError(durationMs);
+      return new GenericError(durationMs);
   }
 }

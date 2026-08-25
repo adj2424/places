@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import type { GoogleConfig } from '../../composition/config.js';
 import type { Logger } from '../../shared/logging/logger.js';
-import { GoogleGenericError, GoogleUnavailableError, mapGoogleHttpStatusToError } from '../domain/errors.js';
+import { GenericError, UnavailableError, mapGoogleHttpStatusToError } from '../domain/errors.js';
 import { type GooglePlacesResponse, type GooglePlace, type PrimaryType, PrimaryTypes } from '../domain/google.js';
 
 const googlePlaceSchema = z.object({
@@ -34,7 +34,7 @@ export class GooglePlacesAdapter {
     primaryTypes: PrimaryType[]
   ): Promise<GooglePlace[]> {
     const started = Date.now();
-    const url = `${this.config.baseUrl}/places:searchNearby`;
+    const url = `${this.config.placesBaseUrl}/places:searchNearby`;
     const requestLogger = this.logger.child({
       url,
       method: 'POST'
@@ -66,13 +66,10 @@ export class GooglePlacesAdapter {
         })
       });
     } catch {
-      throw new GoogleUnavailableError(Date.now() - started);
+      throw new UnavailableError(Date.now() - started);
     }
 
     if (!response.ok) {
-      if (response.status >= 500) {
-        throw new GoogleUnavailableError(Date.now() - started);
-      }
       const error = await response.json();
       requestLogger.error({ status: response.status, error }, 'external google places api request failed');
       throw mapGoogleHttpStatusToError(response.status, Date.now() - started);
@@ -83,7 +80,7 @@ export class GooglePlacesAdapter {
 
     if (!parsed.success) {
       requestLogger.error({ issues: parsed.error.issues }, 'invalid google places api response shape');
-      throw new GoogleGenericError(Date.now() - started);
+      throw new GenericError(Date.now() - started);
     }
 
     requestLogger.info('google search request successful');

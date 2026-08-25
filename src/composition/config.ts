@@ -13,7 +13,8 @@ export type Config = {
 
 export type GoogleConfig = {
   apiKey: string;
-  baseUrl: string;
+  placesBaseUrl: string;
+  geocodingBaseUrl: string;
 };
 
 const configSchema = z.object({
@@ -25,7 +26,8 @@ const configSchema = z.object({
   }),
   google: z.object({
     apiKey: z.string().min(1),
-    baseUrl: z.string().min(1)
+    placesBaseUrl: z.string().min(1),
+    geocodingBaseUrl: z.string().min(1)
   })
 });
 
@@ -40,7 +42,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
       },
       google: {
         apiKey: env.GOOGLE_API_KEY,
-        baseUrl: env.GOOGLE_BASE_URL
+        placesBaseUrl: env.GOOGLE_PLACES_BASE_URL,
+        geocodingBaseUrl: env.GOOGLE_GEOCODING_BASE_URL
       }
     });
   } catch (error) {
