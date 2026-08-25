@@ -89,10 +89,11 @@ export class GoogleGeocodingAdapter {
     });
     const url = `${this.config.geocodingBaseUrl}?${params.toString()}`;
     const requestLogger = this.logger.child({
-      url,
+      baseUrl: this.config.geocodingBaseUrl,
       method: 'GET'
     });
 
+    requestLogger.info({ address }, 'google geocoding request');
     let response: Response;
     try {
       response = await fetch(url);

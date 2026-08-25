@@ -1,7 +1,7 @@
 import type { Express, Request, Response } from 'express';
 import { z } from 'zod';
 import type { Logger } from '../../shared/logging/logger.js';
-import { PrimaryTypes, type GooglePlace, type PrimaryType } from '../domain/google.js';
+import { PrimaryTypes, type GooglePlace, type PrimaryType } from '../domain/google-places.js';
 import type { PlacesService } from '../domain/port.js';
 import type { Coordinates } from '../domain/coordinates.js';
 
@@ -99,7 +99,7 @@ export function registerPlacesRoutes(app: Express, placesService: PlacesService,
     try {
       if (isAddressRequest(request)) {
         coordinates = await placesService.getCoordinatesByAddress(request.address!);
-        logger.info({ coordinates }, 'got coordinates from address');
+        logger.info({ coordinates }, 'address transformed to coordinates');
       } else {
         coordinates = { latitude: request.latitude!, longitude: request.longitude! };
       }

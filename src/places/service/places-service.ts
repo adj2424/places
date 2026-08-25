@@ -1,6 +1,6 @@
 import type { GooglePlacesAdapter } from '../adapters/google.js';
 import type { GoogleGeocodingAdapter } from '../adapters/geocoding.js';
-import type { GooglePlace, PrimaryType } from '../domain/google.js';
+import type { GooglePlace, PrimaryType } from '../domain/google-places.js';
 import type { PlacesService } from '../domain/port.js';
 import type { Coordinates } from '../domain/coordinates.js';
 

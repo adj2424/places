@@ -2,7 +2,12 @@ import { z } from 'zod';
 import type { GoogleConfig } from '../../composition/config.js';
 import type { Logger } from '../../shared/logging/logger.js';
 import { GenericError, UnavailableError, mapGoogleHttpStatusToError } from '../domain/errors.js';
-import { type GooglePlacesResponse, type GooglePlace, type PrimaryType, PrimaryTypes } from '../domain/google.js';
+import {
+  type GooglePlacesResponse,
+  type GooglePlace,
+  type PrimaryType,
+  PrimaryTypes
+} from '../domain/google-places.js';
 
 const googlePlaceSchema = z.object({
   id: z.string(),
@@ -36,14 +41,12 @@ export class GooglePlacesAdapter {
     const started = Date.now();
     const url = `${this.config.placesBaseUrl}/places:searchNearby`;
     const requestLogger = this.logger.child({
-      url,
+      baseUrl: this.config.placesBaseUrl,
       method: 'POST'
     });
 
-    let response: Response;
-
     requestLogger.info({ latitude, longitude, radiusMeters, primaryTypes }, 'google search request');
-
+    let response: Response;
     try {
       response = await fetch(url, {
         method: 'POST',
