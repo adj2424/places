@@ -24,6 +24,7 @@ npm run dev
 | Shared logging                       | `src/shared/logging/`                                                                                                                                                                 |
 | Config + `buildApp` wiring           | `src/composition/`                                                                                                                                                                    |
 | Process listen entry                 | `src/main.ts`                                                                                                                                                                         |
+| HTTP API reference (live fields)     | `docs/api.md`                                                                                                                                                                         |
 | Documented solutions                 | `docs/solutions/` — past problems and patterns organized by category with YAML frontmatter (`module`, `tags`, `problem_type`); snapshots. Living docs plus composition win on layout. |
 | Shared vocabulary                    | `CONCEPTS.md`                                                                                                                                                                         |
 | Tests                                | `tests/<slice>/` for service/domain; HTTP via `supertest` and `buildApp(config, logger)`                                                                                              |
@@ -37,6 +38,7 @@ Dependency rule: `domain` and `service` never import Express or other adapter SD
 - Add features as domain → service → adapters → `buildApp`.
 - Run `typecheck` and existing `test` before claiming done.
 - Update this file in the same change if layout or scripts change.
+- When inbound HTTP fields, status codes, or JSON bodies change, restate `docs/api.md` in the same change.
 - Bind locally by default (`HOST=127.0.0.1`); do not log request bodies by default.
 
 **Ask first**
@@ -72,6 +74,6 @@ Exemplar references:
 
 ## Boundaries
 
-- On conflict: **code + package scripts win**; update AGENTS.md / architecture.md to match. Composition wiring is the live tree.
-- Health runs a live Google Places connectivity/auth check on every `GET /health` request; feature validation failures must not by themselves make health unhealthy.
+- On conflict: **code + package scripts win** for runtime behavior. Among living docs: **`docs/api.md` wins for HTTP request/response fields and status JSON**; this file's numbered recipe wins for adapter error-mapping when implementing routes; [docs/architecture.md](./docs/architecture.md) wins for layers and outbound adapter roles. Update AGENTS.md / architecture.md when layout or scripts change.
+- Health runs a live Google Places connectivity/auth check on every `GET /health` request (**product** intent); live probe and response JSON are documented in [docs/api.md](./docs/api.md). Feature validation failures must not by themselves make health unhealthy.
 - No DB, auth, queues, Docker/K8s, or runtime LLM layer in this service.

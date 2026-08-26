@@ -11,8 +11,8 @@ _Avoid:_ “just put routes in the use case,” framework-first layering; naming
 
 ### Living docs
 
-The current product and layout contract for humans and agents. On conflict with older plans or past solution writeups, living docs plus the composition root win.
-_Avoid:_ treating historical plans as the operating recipe
+The current product and layout contract for humans and agents. On conflict with older plans or past solution writeups, living docs plus the composition root win. Among living docs, the HTTP field catalog wins for request/response JSON and status bodies; the feature recipe wins for adapter error-mapping targets; architecture wins for layers and outbound adapter roles.
+_Avoid:_ treating historical plans as the operating recipe; copying HTTP field tables into README or architecture
 
 ### Snapshot
 
@@ -36,11 +36,15 @@ _Avoid:_ inventing a custom logger port so children can be passed around; docume
 
 ### Health
 
-Inbound probe on `GET /health` that reports service reachability plus a live Google Places connectivity/auth check. Feature validation failures must not by themselves make health unhealthy when Google Places would otherwise pass; missing/invalid Google credentials or a failed/timed-out Places check make health unhealthy.
+Inbound probe on `GET /health` that reports service reachability plus a live Google Places connectivity/auth check (**product** meaning). Feature validation failures must not by themselves make health unhealthy when Google Places would otherwise pass; missing/invalid Google credentials or a failed/timed-out Places check make health unhealthy.
+
+_Live HTTP fields and status JSON: [docs/api.md](docs/api.md). This entry is product meaning, not the live wire._
 
 ### Upstream unavailability
 
 The condition when find-places cannot complete because Places Nearby Search or Geocoding returned 5xx, timed out, or the network failed (Geocoding also maps `OVER_QUERY_LIMIT` and `UNKNOWN_ERROR` here). Living docs specify HTTP 502 with an opaque body for this condition. Distinct from Health’s unhealthy/503, which means this process cannot complete its Places connectivity/auth check.
+
+_Live HTTP fields and status JSON: [docs/api.md](docs/api.md). This entry is product meaning, not the live wire._
 _Avoid:_ echoing Google’s 503 to find-places callers; treating classified unavailability as a bug 500; conflating with invalid caller input
 
 ## Places
