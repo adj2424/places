@@ -24,7 +24,7 @@ Process startup requires `GOOGLE_API_KEY`, `GOOGLE_PLACES_BASE_URL`, and `GOOGLE
 
 ## Living-docs drift
 
-Product docs (CONCEPTS **Health** / **Upstream unavailability**, AGENTS adapter error-mapping recipe, architecture **role** rows) describe intended Google Places connectivity/auth and mapped **400** / **502** / **500** find-places errors. **This file documents what the running process returns today.** When they differ, trust this file for request/response JSON and status bodies.
+Product docs (CONCEPTS **Health** / **Upstream unavailability**, AGENTS adapter error-mapping recipe, architecture **role** rows) describe intended Google Places connectivity/auth. **This file documents what the running process returns today.** When they differ, trust this file for request/response JSON and status bodies.
 
 ---
 
@@ -114,6 +114,9 @@ Standard Zod issues (type, range, unknown `primaryTypes` key, etc.) use default 
 |--------|------|------|
 | **200** | [FindPlacesResponse](#findplacesresponse) | Valid body; Nearby Search completed |
 | **400** | `{ "error": <Zod issue array> }` | Request failed Zod `safeParse` (no Google call) |
+| **400** | `{ "error": "invalid address" }` | Address mode; Geocoding returned no match (`GeocodeInvalidAddressError`) |
+| **502** | `{ "error": "places search unavailable" }` | Upstream unavailability (Geocoding or Nearby Search network/5xx/quota, including `GeocodeUnavailableError`) |
+| **500** | `{ "error": "places search unavailable" }` | Unexpected failure (malformed upstream body, Google 4xx other than quota, unclassified errors) |
 
 **Example — coordinates mode**
 
@@ -182,9 +185,27 @@ Issue objects follow [Zod's `ZodIssue`](https://zod.dev) shape (`code`, `path`, 
 - **Website filter:** Not applied today — places with a website may appear in results.
 - **Paging:** Single Nearby Search call; no client paging parameter.
 
+**Example — unmatched address (400)**
+
+```json
+{
+  "error": "invalid address"
+}
+```
+
+**Example — upstream unavailability (502)**
+
+```json
+{
+  "error": "places search unavailable"
+}
+```
+
+**502** and **500** share that opaque string; callers distinguish them by status. Client JSON does not include Google error text, status codes, or stack traces.
+
 #### Out of contract
 
-After a **valid** body, Geocoding or Nearby Search failures are caught and rethrown as an internal placeholder error. The route does **not** return documented **502** or opaque **500** JSON. Callers may see Express default errors (often **500**, not JSON). Wrong HTTP method, unknown paths, oversize body, and malformed JSON are handled by Express/middleware — not the Zod **400** envelope.
+Wrong HTTP method, unknown paths, oversize body, and malformed JSON are handled by Express/middleware — not the Zod **400** envelope.
 
 ---
 
@@ -228,6 +249,12 @@ Public mapping from Google Nearby Search (website field excluded).
 | Field | Type | Description |
 |-------|------|-------------|
 | `error` | array | Zod validation issues |
+
+### OpaqueErrorBody
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `error` | string | Opaque message: `"invalid address"` on unmatched geocode **400**; `"places search unavailable"` on **502** and **500** |
 
 ### PrimaryType
 

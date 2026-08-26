@@ -7,7 +7,7 @@ Shared domain vocabulary for this project — entities, named processes, and sta
 ### Hexagonal layout
 
 The project’s ports-and-adapters shape: domain and service stay free of HTTP/framework types; adapters handle transport; composition wires them together. Swapping an inbound HTTP library is an adapter change, not a domain rewrite.
-_Avoid:_ “just put routes in the use case,” framework-first layering; naming the use-case layer “application”
+_Avoid:_ “just put routes in the use case,” framework-first layering; naming the use-case layer “application”; encoding inbound HTTP status codes or response JSON in domain
 
 ### Living docs
 
@@ -42,10 +42,10 @@ _Live HTTP fields and status JSON: [docs/api.md](docs/api.md). This entry is pro
 
 ### Upstream unavailability
 
-The condition when find-places cannot complete because Places Nearby Search or Geocoding returned 5xx, timed out, or the network failed (Geocoding also maps `OVER_QUERY_LIMIT` and `UNKNOWN_ERROR` here). Living docs specify HTTP 502 with an opaque body for this condition. Distinct from Health’s unhealthy/503, which means this process cannot complete its Places connectivity/auth check.
+The condition when find-places cannot complete because Places Nearby Search or Geocoding returned 5xx, timed out, or the network failed (Geocoding also maps `OVER_QUERY_LIMIT` and `UNKNOWN_ERROR` here). Living docs specify HTTP 502 with an opaque body for this condition. The live mapper uses hop-specific opaque strings (Nearby Search vs Geocoding) rather than one shared string, and is coarser than this product condition: other Nearby Search HTTP failures also return 502. Unmatched geocode remains invalid caller input (400), not this condition. Distinct from Health’s unhealthy/503, which means this process cannot complete its Places connectivity/auth check.
 
 _Live HTTP fields and status JSON: [docs/api.md](docs/api.md). This entry is product meaning, not the live wire._
-_Avoid:_ echoing Google’s 503 to find-places callers; treating classified unavailability as a bug 500; conflating with invalid caller input
+_Avoid:_ echoing Google’s 503 to find-places callers; treating classified unavailability as a bug 500; conflating with invalid caller input; assuming one shared 502 string for both Google hops
 
 ## Places
 

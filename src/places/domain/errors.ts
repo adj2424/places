@@ -41,7 +41,7 @@ export class PermissionDeniedError extends GooglePlacesError {
 
 export class NotFoundError extends GooglePlacesError {
   constructor(durationMs: number) {
-    super('google not found', durationMs);
+    super('google request not found', durationMs);
   }
 }
 
@@ -123,4 +123,25 @@ export function mapGoogleHttpStatusToError(status: number, durationMs: number): 
     default:
       return new GenericError(durationMs);
   }
+}
+
+export type MappedFindPlacesError = {
+  status: 400 | 500 | 502;
+  body: { error: string };
+};
+
+export function mapFindPlacesError(error: unknown): MappedFindPlacesError {
+  if (error instanceof GeocodeInvalidAddressError) {
+    return { status: 400, body: { error: error.message } };
+  }
+
+  if (error instanceof GooglePlacesError) {
+    return { status: 502, body: { error: 'google places service unavailable' } };
+  }
+
+  if (error instanceof GoogleGeocodeError) {
+    return { status: 502, body: { error: 'google geocoding service unavailable' } };
+  }
+
+  return { status: 500, body: { error: 'unknown error' } };
 }

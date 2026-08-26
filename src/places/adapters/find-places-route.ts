@@ -4,6 +4,7 @@ import type { Logger } from '../../shared/logging/logger.js';
 import { PrimaryTypes, type GooglePlace, type PrimaryType } from '../domain/google-places.js';
 import type { PlacesService } from '../domain/port.js';
 import type { Coordinates } from '../domain/coordinates.js';
+import { mapFindPlacesError } from '../domain/errors.js';
 
 type FindPlacesRequest = {
   address?: string;
@@ -105,9 +106,10 @@ export function registerPlacesRoutes(app: Express, placesService: PlacesService,
       }
     } catch (error) {
       logger.error({ error }, 'error getting coordinates');
-      throw new Error('this would be a route error mapped from domain error - finding places');
+      const { status, body } = mapFindPlacesError(error);
+      res.status(status).json(body);
+      return;
     }
-    // return res.status(200).json({ coordinates });
 
     try {
       const places = await placesService.getPlaces(coordinates, request.radiusMeters, request.primaryTypes ?? []);
@@ -115,7 +117,8 @@ export function registerPlacesRoutes(app: Express, placesService: PlacesService,
       logger.info('found places with no website successfully');
     } catch (error) {
       logger.error({ error }, 'error finding places');
-      throw new Error('this would be a route error mapped from domain error - finding places');
+      const { status, body } = mapFindPlacesError(error);
+      res.status(status).json(body);
     }
   });
 }

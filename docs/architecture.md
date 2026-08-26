@@ -43,7 +43,7 @@ Field-level request/response contract (live adapters): **[api.md](./api.md)**.
 | `GET` | `/health` | Process reachability plus Google Places connectivity/auth (**product** intent); live JSON and probe behavior are in [api.md](./api.md) |
 | `POST` | `/find-places` | Nearby search from coordinates or a request address (XOR) plus `radiusMeters`; validation at the HTTP edge |
 
-Adapter error-mapping targets (**400** validation, **502** upstream unavailability, **500** unexpected) are in [AGENTS.md](../AGENTS.md) — not necessarily live on find-places yet. Health **503** is the probe unhealthy signal; it is distinct from find-places upstream unavailability.
+Adapter error-mapping (**400** validation / unmatched geocode, **502** upstream unavailability, **500** unexpected) is applied on `POST /find-places` from domain error types. Health **503** is the probe unhealthy signal; it is distinct from find-places upstream unavailability.
 
 ## Outbound adapters
 
