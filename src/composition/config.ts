@@ -35,7 +35,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
   try {
     return configSchema.parse({
       server: {
-        port: Number(env.PORT ?? 3000)
+        port: Number(env.PORT ?? 3001)
       },
       log: {
         level: env.LOG_LEVEL ?? 'info'

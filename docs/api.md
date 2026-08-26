@@ -18,7 +18,7 @@ Layer map and outbound adapters: [architecture.md](./architecture.md). Glossary:
 
 | URL | Notes |
 |-----|-------|
-| `http://127.0.0.1:{PORT}` | Default `PORT` is **3000** (`src/composition/config.ts`). The process listens on all interfaces; `127.0.0.1` is the usual local caller convention. |
+| `http://127.0.0.1:{PORT}` | Default `PORT` is **3001** (`src/composition/config.ts`). The process listens on all interfaces; `127.0.0.1` is the usual local caller convention. |
 
 Process startup requires `GOOGLE_API_KEY`, `GOOGLE_PLACES_BASE_URL`, and `GOOGLE_GEOCODING_BASE_URL` (see `.env.example`). Missing config prevents listen; that is not an HTTP response.
 
@@ -49,7 +49,7 @@ Liveness-style probe. Runs a live outbound check on every request (no cache).
 
 ```http
 GET /health HTTP/1.1
-Host: 127.0.0.1:3000
+Host: 127.0.0.1:3001
 ```
 
 ```json
@@ -122,7 +122,7 @@ Standard Zod issues (type, range, unknown `primaryTypes` key, etc.) use default 
 
 ```http
 POST /find-places HTTP/1.1
-Host: 127.0.0.1:3000
+Host: 127.0.0.1:3001
 Content-Type: application/json
 
 {

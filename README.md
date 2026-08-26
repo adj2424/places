@@ -17,7 +17,7 @@ Copy `.env.example` to `.env` before `npm run dev` — Node `--env-file` fails i
 
 ## HTTP API
 
-Base URL: `http://127.0.0.1:3000` (default `PORT`). No authentication. Full field reference: **[docs/api.md](./docs/api.md)**.
+Base URL: `http://127.0.0.1:3001` (default `PORT`). No authentication. Full field reference: **[docs/api.md](./docs/api.md)**.
 
 ### `GET /health`
 
@@ -29,7 +29,7 @@ Liveness probe with a live outbound check on every request.
 | **503** | `{ "status": "unhealthy" }` |
 
 ```bash
-curl -s http://127.0.0.1:3000/health
+curl -s http://127.0.0.1:3001/health
 ```
 
 ### `POST /find-places`
@@ -49,7 +49,7 @@ Nearby search from Google Places. Send JSON with `Content-Type: application/json
 **Coordinates example**
 
 ```bash
-curl -s -X POST http://127.0.0.1:3000/find-places \
+curl -s -X POST http://127.0.0.1:3001/find-places \
   -H "Content-Type: application/json" \
   -d '{"latitude":40.7,"longitude":-74,"radiusMeters":500,"primaryTypes":["foodAndDrink"]}'
 ```
@@ -57,7 +57,7 @@ curl -s -X POST http://127.0.0.1:3000/find-places \
 **Address example**
 
 ```bash
-curl -s -X POST http://127.0.0.1:3000/find-places \
+curl -s -X POST http://127.0.0.1:3001/find-places \
   -H "Content-Type: application/json" \
   -d '{"address":"1600 Amphitheatre Parkway, Mountain View, CA","radiusMeters":1000}'
 ```
