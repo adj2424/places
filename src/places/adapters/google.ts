@@ -1,7 +1,12 @@
 import { z } from 'zod';
 import type { GoogleConfig } from '../../composition/config.js';
 import type { Logger } from '../../shared/logging/logger.js';
-import { GenericError, UnavailableError, mapGoogleHttpStatusToError } from '../domain/errors.js';
+import {
+  GenericError,
+  UnavailableError,
+  mapGoogleHttpStatusToError,
+  type GooglePlacesApiResponseError
+} from '../domain/errors.js';
 import {
   type GooglePlacesResponse,
   type GooglePlace,
@@ -73,9 +78,9 @@ export class GooglePlacesAdapter {
     }
 
     if (!response.ok) {
-      const error = await response.json();
+      const error = (await response.json()) as GooglePlacesApiResponseError;
       requestLogger.error({ status: response.status, error }, 'external google places api request failed');
-      throw mapGoogleHttpStatusToError(response.status, Date.now() - started);
+      throw mapGoogleHttpStatusToError(error, Date.now() - started);
     }
 
     const raw = await response.json();

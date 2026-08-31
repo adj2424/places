@@ -8,6 +8,14 @@ export const GOOGLE_ERROR_CODES = {
   UNAVAILABLE: 503
 } as const;
 
+export type GooglePlacesApiResponseError = {
+  error: {
+    code: number;
+    message: string;
+    status: string;
+  };
+};
+
 export class GooglePlacesError extends Error {
   readonly durationMs: number;
   readonly name: string;
@@ -54,6 +62,12 @@ export class ResourceExhaustedError extends GooglePlacesError {
 export class UnavailableError extends GooglePlacesError {
   constructor(durationMs: number) {
     super('google service unavailable', durationMs);
+  }
+}
+
+export class TooManyPrimaryTypesError extends GooglePlacesError {
+  constructor(durationMs: number) {
+    super('google too many types included in primary types', durationMs);
   }
 }
 
@@ -106,9 +120,12 @@ export class GeocodeResourceExhaustedError extends GoogleGeocodeError {
   }
 }
 
-export function mapGoogleHttpStatusToError(status: number, durationMs: number): GooglePlacesError {
-  switch (status) {
+export function mapGoogleHttpStatusToError(error: GooglePlacesApiResponseError, durationMs: number): GooglePlacesError {
+  switch (error.error.code) {
     case GOOGLE_ERROR_CODES.INVALID_ARGUMENT:
+      if (error.error.message.includes('Too many types in included_primary_types')) {
+        return new TooManyPrimaryTypesError(durationMs);
+      }
       return new InvalidArgumentError(durationMs);
     case GOOGLE_ERROR_CODES.UNAUTHENTICATED:
       return new UnauthenticatedError(durationMs);
@@ -131,7 +148,7 @@ export type MappedFindPlacesError = {
 };
 
 export function mapFindPlacesError(error: unknown): MappedFindPlacesError {
-  if (error instanceof GeocodeInvalidAddressError) {
+  if (error instanceof GeocodeInvalidAddressError || error instanceof TooManyPrimaryTypesError) {
     return { status: 400, body: { error: error.message } };
   }
 
