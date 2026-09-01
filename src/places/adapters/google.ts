@@ -73,13 +73,14 @@ export class GooglePlacesAdapter {
           }
         })
       });
-    } catch {
+    } catch (error) {
+      requestLogger.error({ error }, 'external google places api request failed');
       throw new UnavailableError(Date.now() - started);
     }
 
     if (!response.ok) {
       const error = (await response.json()) as GooglePlacesApiResponseError;
-      requestLogger.error({ status: response.status, error }, 'external google places api request failed');
+      requestLogger.error({ status: response.status, error }, 'external google places api returned error response');
       throw mapGoogleHttpStatusToError(error, Date.now() - started);
     }
 
@@ -95,3 +96,4 @@ export class GooglePlacesAdapter {
     return parsed.data.places ?? ([] as GooglePlace[]);
   }
 }
+
