@@ -4,6 +4,7 @@ import type { LogLevel } from '../shared/logging/logger.js';
 export type Config = {
   server: {
     port: number;
+    corsOrigin: string;
   };
   log: {
     level: LogLevel;
@@ -19,7 +20,8 @@ export type GoogleConfig = {
 
 const configSchema = z.object({
   server: z.object({
-    port: z.coerce.number().int().positive()
+    port: z.coerce.number().int().positive(),
+    corsOrigin: z.string().min(1)
   }),
   log: z.object({
     level: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent'])
@@ -35,7 +37,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
   try {
     return configSchema.parse({
       server: {
-        port: Number(env.PORT ?? 3001)
+        port: Number(env.PORT ?? 3001),
+        corsOrigin: env.CORS_ORIGIN ?? 'http://localhost:3000'
       },
       log: {
         level: env.LOG_LEVEL ?? 'info'

@@ -1,4 +1,5 @@
 import express, { type Express } from 'express';
+import cors from 'cors';
 import { registerHealthRoutes } from '../health/adapters/health-routes.js';
 import { HealthServiceImpl } from '../health/service/health-service.js';
 import { registerPlacesRoutes } from '../places/adapters/find-places-route.js';
@@ -12,6 +13,7 @@ import type { Logger } from '../shared/logging/logger.js';
 export function buildApp(config: Config, logger: Logger): Express {
   const app = express();
   app.disable('x-powered-by');
+  app.use(cors({ origin: config.server.corsOrigin }));
   app.use(express.json({ limit: '32kb' }));
 
   const healthLogger = logger.child({ component: 'health' });
