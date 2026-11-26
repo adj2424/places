@@ -1,8 +1,9 @@
 import type { Express, Request, Response } from 'express';
+import { performance } from 'node:perf_hooks';
 import { z } from 'zod';
 import type { Logger } from '../../shared/logging/logger.js';
-import { PrimaryTypes, type GooglePlace, type PrimaryType } from '../domain/google-places.js';
-import type { PlacesService } from '../domain/port.js';
+import { PrimaryTypes, type PrimaryType } from '../domain/google-places.js';
+import type { PlacesSearchResult, PlacesService } from '../domain/port.js';
 import type { Coordinates } from '../domain/coordinates.js';
 import { mapFindPlacesError } from '../domain/errors.js';
 
@@ -24,6 +25,7 @@ type FindPlacesResponse = {
     primaryType?: string;
   }[];
   total: number;
+  googlePlacesApiCalls: number;
 };
 
 const findPlacesRequestSchema = z
@@ -78,6 +80,7 @@ function isCoordinatesRequest(data: FindPlacesRequest): boolean {
 
 export function registerPlacesRoutes(app: Express, placesService: PlacesService, logger: Logger): void {
   app.post('/find-places', async (req: Request, res: Response) => {
+    const started = performance.now();
     const parsedInput = findPlacesRequestSchema.safeParse(req.body);
     if (!parsedInput.success) {
       logger.error(
@@ -111,19 +114,46 @@ export function registerPlacesRoutes(app: Express, placesService: PlacesService,
       return;
     }
 
+    if (res.destroyed) return;
+    const { radiusMeters, primaryTypes = [] } = request;
+    const searchContext = {
+      latitude: coordinates.latitude,
+      longitude: coordinates.longitude,
+      radiusMeters,
+      primaryTypes
+    };
+    const cancellation = new AbortController();
+    const onClose = () => cancellation.abort();
+    res.once('close', onClose);
     try {
-      const places = await placesService.getPlaces(coordinates, request.radiusMeters, request.primaryTypes ?? []);
-      res.status(200).json(mapFindPlacesResponse(places));
-      logger.info('found places with no website successfully');
+      logger.info(searchContext, 'places search request');
+      const result = await placesService.getPlaces(
+        coordinates, radiusMeters, primaryTypes, cancellation.signal
+      );
+      if (res.destroyed) return;
+      const response = mapFindPlacesResponse(result);
+      res.status(200).json(response);
+      logger.info(
+        {
+          ...searchContext,
+          total: response.total,
+          googlePlacesApiCalls: response.googlePlacesApiCalls,
+          durationMs: performance.now() - started
+        },
+        'places search completed'
+      );
     } catch (error) {
+      if (res.destroyed) return;
       logger.error({ error }, 'error finding places');
       const { status, body } = mapFindPlacesError(error);
       res.status(status).json(body);
+    } finally {
+      res.off('close', onClose);
     }
   });
 }
 
-function mapFindPlacesResponse(places: GooglePlace[]): FindPlacesResponse {
+function mapFindPlacesResponse({ places, googlePlacesApiCalls }: PlacesSearchResult): FindPlacesResponse {
   const ret = places.map(place => ({
     id: place.id,
     name: place.displayName?.text,
@@ -132,5 +162,5 @@ function mapFindPlacesResponse(places: GooglePlace[]): FindPlacesResponse {
     types: place.types,
     primaryType: place.primaryType
   }));
-  return { places: ret, total: places.length };
+  return { places: ret, total: places.length, googlePlacesApiCalls };
 }

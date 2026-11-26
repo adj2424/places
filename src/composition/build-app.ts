@@ -27,7 +27,7 @@ export function buildApp(config: Config, logger: Logger): Express {
   const placesService = new PlacesServiceImpl(googlePlacesAdapter, geocodingAdapter);
 
   registerHealthRoutes(app, healthService, healthLogger);
-  registerPlacesRoutes(app, placesService, placesLogger);
+  registerPlacesRoutes(app, placesService, placesLogger.child({ baseUrl: config.google.placesBaseUrl }));
 
   return app;
 }

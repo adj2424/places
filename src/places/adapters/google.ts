@@ -16,6 +16,7 @@ import {
 
 const googlePlaceSchema = z.object({
   id: z.string(),
+  location: z.object({ latitude: z.number().min(-90).max(90), longitude: z.number().min(-180).max(180) }).optional(),
   types: z.array(z.string()).optional(),
   primaryType: z.string().optional(),
   displayName: z.object({ text: z.string(), languageCode: z.string() }).optional(),
@@ -30,7 +31,7 @@ const googlePlacesResponseSchema = z.object({
 
 export class GooglePlacesAdapter {
   private readonly PLACES_NEARBY_FIELD_MASK =
-    'places.id,places.displayName,places.formattedAddress,places.nationalPhoneNumber,places.websiteUri,places.types,places.primaryType';
+    'places.id,places.location,places.displayName,places.formattedAddress,places.nationalPhoneNumber,places.websiteUri,places.types,places.primaryType';
 
   constructor(
     private readonly config: GoogleConfig,
@@ -41,7 +42,8 @@ export class GooglePlacesAdapter {
     latitude: number,
     longitude: number,
     radiusMeters: number,
-    primaryTypes: PrimaryType[]
+    primaryTypes: PrimaryType[],
+    signal?: AbortSignal
   ): Promise<GooglePlace[]> {
     const started = Date.now();
     const url = `${this.config.placesBaseUrl}/places:searchNearby`;
@@ -50,10 +52,11 @@ export class GooglePlacesAdapter {
       method: 'POST'
     });
 
-    requestLogger.info({ latitude, longitude, radiusMeters, primaryTypes }, 'google search request');
+    requestLogger.debug({ latitude, longitude, radiusMeters, primaryTypes }, 'google search request');
     let response: Response;
     try {
       response = await fetch(url, {
+        signal,
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -92,8 +95,9 @@ export class GooglePlacesAdapter {
       throw new GenericError(Date.now() - started);
     }
 
-    requestLogger.info('google search request successful');
-    return parsed.data.places ?? ([] as GooglePlace[]);
+    const places = parsed.data.places ?? [];
+    requestLogger.debug({ radiusMeters, resultCount: places.length }, 'google search request successful');
+    return places;
   }
 }
 

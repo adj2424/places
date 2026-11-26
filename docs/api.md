@@ -145,7 +145,8 @@ Content-Type: application/json
       "primaryType": "cafe"
     }
   ],
-  "total": 1
+  "total": 1,
+  "googlePlacesApiCalls": 1
 }
 ```
 
@@ -181,9 +182,11 @@ Issue objects follow [Zod's `ZodIssue`](https://zod.dev) shape (`code`, `path`, 
 #### Behavior notes (live)
 
 - **`total`:** Count of items in `places` (same length as the array).
+- **`googlePlacesApiCalls`** counts the initial Nearby Search call and any subdivision calls made for this request. The count covers Nearby Search only.
 - **`primaryTypes` omitted:** Passed to the service as `[]` (empty `includedPrimaryTypes` on the Google request).
 - **Website filter:** Not applied today — places with a website may appear in results.
-- **Paging:** Single Nearby Search call; no client paging parameter.
+- **Search coverage:** A Google response with 20 places triggers searches of smaller overlapping circles, down to a 50-meter radius. Smaller original requests run once at their requested radius. Results from all calls are combined by Google place ID within the original circle. A dense search can take many requests.
+- **Completeness:** A circle that still returns 20 places at the minimum radius may contain additional matches. The response contains the places discovered, with no client paging parameter or completeness indicator. If any call fails, the endpoint returns its usual mapped error for the entire search.
 
 **Example — unmatched address (400)**
 
@@ -230,6 +233,7 @@ See [request body](#request-body) table. TypeScript name in route: `FindPlacesRe
 |-------|------|----------|-------------|
 | `places` | [NearbyPlace](#nearbyplace)[] | yes | Results (may be empty) |
 | `total` | number | yes | `places.length` |
+| `googlePlacesApiCalls` | number | yes | Number of Google Nearby Search calls made for this request |
 
 ### NearbyPlace
 

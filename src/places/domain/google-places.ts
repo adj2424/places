@@ -1,4 +1,7 @@
+import type { Coordinates } from './coordinates.js';
+
 export type GooglePlace = {
+  location?: Coordinates;
   id: string;
   types?: string[];
   primaryType?: string;
