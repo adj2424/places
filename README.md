@@ -1,10 +1,13 @@
 # Places
 
-Local Node.js TypeScript service that searches nearby places without websites, with a health probe that includes a Google Places connectivity/auth check.
+Nearby Explorer searches for places without websites from an address or your current location. It shows the search area, result listings, and the number of Google Nearby Search calls.
 
-The backend lives in `back/`. Frontend code belongs in `front/`.
+- `front/` contains the React and Vite browser app.
+- `back/` contains the Node.js and Express API.
 
 ## Backend quick start
+
+Use Node.js 22.22.2 or later on the Node 22 line to run both packages, including the frontend test dependencies.
 
 ```bash
 cd back
@@ -16,6 +19,20 @@ npm run dev
 ```
 
 Copy `.env.example` to `.env` before `npm run dev` — Node `--env-file` fails if `.env` is missing. Set `GOOGLE_API_KEY` and the Google base URLs in `.env` for find-places (and for process startup).
+
+## Frontend quick start
+
+From the repository root, start the API using the backend steps above. In a second terminal, run:
+
+```bash
+cd front
+npm install
+npm run dev
+```
+
+Open http://localhost:3000. Vite uses port **3000** and the browser calls the API directly at `http://127.0.0.1:3001`. The API allows `http://localhost:3000` through CORS by default. If you open the UI at a different origin, set `CORS_ORIGIN` in `back/.env` to that exact origin and restart the API.
+
+Set `VITE_PLACES_BASE_URL` when the API uses a different URL. Run frontend checks from `front/` with `npm test`, `npm run lint`, and `npm run build`. The build runs TypeScript and produces the Vite bundle.
 
 ## HTTP API
 
@@ -45,7 +62,7 @@ Nearby search from Google Places. Send JSON with `Content-Type: application/json
 - **`primaryTypes` optional:** filter by this service's category keys (not Google type strings like `restaurant`). Allowed values:
 
   `automotive`, `business`, `culture`, `education`, `entertainmentAndRecreation`, `facilities`, `finance`, `foodAndDrink`, `geographicalAreas`, `government`, `healthAndWellness`, `housing`, `lodging`, `naturalFeatures`, `placesOfWorship`, `services`, `shopping`, `sports`, `transportation`
-- **200 response:** `{ "places": [...], "total": <n> }` — each place has `id` plus optional `name`, `address`, `phone`, `types`, `primaryType`.
+- **200 response:** `{ "places": [...], "total": <n>, "googlePlacesApiCalls": <n> }` — each place has `id` plus optional `name`, `address`, `phone`, `types`, `primaryType`.
 - **400 validation:** `{ "error": [ ... ] }` when the body fails Zod checks at the HTTP edge.
 
 **Coordinates example**
@@ -78,7 +95,8 @@ curl -s -X POST http://127.0.0.1:3001/find-places \
       "primaryType": "cafe"
     }
   ],
-  "total": 1
+  "total": 1,
+  "googlePlacesApiCalls": 1
 }
 ```
 

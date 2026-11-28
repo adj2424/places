@@ -11,7 +11,7 @@ _Avoid:_ “just put routes in the use case,” framework-first layering; naming
 
 ### Living docs
 
-The current product and layout contract for humans and agents. On conflict with older plans or past solution writeups, living docs plus the composition root win. Among living docs, the HTTP field catalog wins for request/response JSON and status bodies; the feature recipe wins for adapter error-mapping targets; architecture wins for layers and outbound adapter roles.
+The current product and layout contract for humans and agents. README owns local setup. AGENTS.md owns the working rules. Living docs and the live package layout take precedence over historical plans and solutions. Code and package scripts define runtime behavior. Among living docs, the HTTP field catalog wins for request/response JSON and status bodies; the feature recipe wins for adapter error-mapping targets; architecture wins for layers and outbound adapter roles.
 _Avoid:_ treating historical plans as the operating recipe; copying HTTP field tables into README or architecture
 
 ### Snapshot
@@ -51,7 +51,7 @@ _Avoid:_ echoing Google’s 503 to find-places callers; treating classified unav
 
 ### Nearby place
 
-A Google Nearby Search result as this service models it: a stable place id plus optional display fields (name, address, phone, types, website, and Google’s primaryType for that place). After search, website emptiness is the product inclusion gate — places with a website are dropped.
+A Google Nearby Search result identified by its place ID. The backend filters out listings that have a website. The API returns the ID and any available name, address, phone, types, and Google primary type. The frontend uses the ID to link to the listing in Google Maps.
 _Avoid:_ treating name/address/phone presence as an inclusion rule
 
 ### Request address
@@ -66,8 +66,8 @@ _Avoid:_ sending a request address into Nearby Search; treating an unassigned or
 
 ### Geocoding
 
-Converting a request address into a unique Search origin via Google Geocoding API so Nearby Search can run. Distinct from the optional address display field on a Nearby place. Unmatched, multiple, or partial matches are invalid caller input, not an empty place list.
-_Avoid:_ treating ZERO_RESULTS as Nearby Search with no places; taking the first of several geocode results; sending the request address into Nearby Search
+Converting a request address into a unique Search origin via Google Geocoding API so Nearby Search can run. Distinct from the optional address display field on a Nearby place. The backend uses the first result and returns an invalid-address error when no match is available.
+_Avoid:_ treating ZERO_RESULTS as Nearby Search with no places; sending the request address into Nearby Search
 
 ### Primary type
 
@@ -78,6 +78,29 @@ _Avoid:_ treating a Google type string such as restaurant as a request category 
 
 The domain map from each primary type to the Google Nearby Search type strings that category expands to. HTTP allow-lists follow the catalog keys; the outbound adapter flattens selected keys into Google’s included-types field.
 _Avoid:_ duplicating the type lists in the HTTP route or the use case
+
+## Nearby Explorer
+
+### Display origin
+
+The coordinates used to draw and fit the search area in the browser. Coordinate search uses the same coordinates for the display and backend search origins. In address mode, Nominatim resolves the display origin separately from backend geocoding. The map waits for a display origin, while the results list follows the backend response.
+
+### Search area
+
+The disk around the origin defined by the search radius. The map displays the disk as a circle and fits the viewport to it using the radius sent with the Places request.
+
+### Google Places API call count
+
+Number of Google Nearby Search calls the backend made for a successful request, including its initial search and any subdivision calls. The frontend displays the count supplied by `googlePlacesApiCalls`.
+
+### Invalid search
+Places rejected the search because it could not use the request, typically an address it cannot geocode. Distinct from too many types, retryable failure, and a successful empty list. Distinct from form `SearchRequestError` (empty address, invalid radius, missing coordinates). The list tells the explorer to change the address; it does not mean Places or the network failed to run, and it does not mean the category set overflowed Google’s type cap.
+
+### Too many types
+Places rejected the search because the selected category keys expand past Google’s included-primary-types cap. Distinct from invalid search and from retryable failure. Distinct from form `SearchRequestError`. The list tells the explorer to deselect some categories and search again; it does not mean the address was unusable or that Places was down. The cap is on expanded Google types, not on how many category checkboxes exist.
+
+### Retryable failure
+Places or the network could not complete a search that the UI already treated as valid to send. Distinct from invalid search, too many types, and a successful empty list. The list tells the explorer to wait and submit again; it does not mean the address was unusable or that too many categories were selected.
 
 ## Flagged ambiguities
 

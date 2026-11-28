@@ -1,0 +1,39 @@
+@import 'tailwindcss';
+
+@theme {
+  --font-sans: system-ui, 'Segoe UI', Roboto, sans-serif;
+  --color-fg: #3f3a48;
+  --color-heading: #141218;
+  --color-muted: #6b6375;
+  --color-bg: #f7f5f2;
+  --color-surface: #fff;
+  --color-border: #e5e4e7;
+  --color-accent: #1d4ed8;
+  --color-accent-hover: #1e40af;
+  --color-danger: #b42318;
+  --shadow-panel: 0 10px 24px -16px rgb(20 18 24 / 0.35);
+}
+
+@layer theme {
+  :root,
+  :host {
+    @variant dark {
+      --color-fg: #d7d3de;
+      --color-heading: #f5f3f8;
+      --color-muted: #a39eab;
+      --color-bg: #121318;
+      --color-surface: #1b1c23;
+      --color-border: #2e303a;
+      --color-accent: #60a5fa;
+      --color-accent-hover: #93c5fd;
+      --color-danger: #f97066;
+      --shadow-panel: 0 12px 28px -18px rgb(0 0 0 / 0.7);
+    }
+  }
+}
+
+@layer base {
+  .leaflet-container img {
+    max-width: none;
+  }
+}

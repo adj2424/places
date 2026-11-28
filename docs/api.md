@@ -114,9 +114,11 @@ Standard Zod issues (type, range, unknown `primaryTypes` key, etc.) use default 
 |--------|------|------|
 | **200** | [FindPlacesResponse](#findplacesresponse) | Valid body; Nearby Search completed |
 | **400** | `{ "error": <Zod issue array> }` | Request failed Zod `safeParse` (no Google call) |
-| **400** | `{ "error": "invalid address" }` | Address mode; Geocoding returned no match (`GeocodeInvalidAddressError`) |
-| **502** | `{ "error": "places search unavailable" }` | Upstream unavailability (Geocoding or Nearby Search network/5xx/quota, including `GeocodeUnavailableError`) |
-| **500** | `{ "error": "places search unavailable" }` | Unexpected failure (malformed upstream body, Google 4xx other than quota, unclassified errors) |
+| **400** | `{ "error": "google geocoding invalid address" }` | Address mode with no usable geocode match |
+| **400** | `{ "error": "google too many types included in primary types" }` | The selected categories expand to more included primary types than Google accepts |
+| **502** | `{ "error": "google places service unavailable" }` | Classified Nearby Search failure |
+| **502** | `{ "error": "google geocoding service unavailable" }` | Classified Geocoding failure |
+| **500** | `{ "error": "unknown error" }` | Unclassified failure |
 
 **Example — coordinates mode**
 
@@ -192,7 +194,7 @@ Issue objects follow [Zod's `ZodIssue`](https://zod.dev) shape (`code`, `path`, 
 
 ```json
 {
-  "error": "invalid address"
+  "error": "google geocoding invalid address"
 }
 ```
 
@@ -200,11 +202,11 @@ Issue objects follow [Zod's `ZodIssue`](https://zod.dev) shape (`code`, `path`, 
 
 ```json
 {
-  "error": "places search unavailable"
+  "error": "google places service unavailable"
 }
 ```
 
-**502** and **500** share that opaque string; callers distinguish them by status. Client JSON does not include Google error text, status codes, or stack traces.
+The public error strings come from the backend mapper. The response omits raw Google error text, Google status codes, and stack traces.
 
 #### Out of contract
 
@@ -258,7 +260,7 @@ Public mapping from Google Nearby Search (website field excluded).
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `error` | string | Opaque message: `"invalid address"` on unmatched geocode **400**; `"places search unavailable"` on **502** and **500** |
+| `error` | string | Public message mapped by the backend for the relevant status and failure, as listed under [Responses](#responses-1) |
 
 ### PrimaryType
 
