@@ -1,11 +1,13 @@
-# Places service
+# Places
 
 Local Node.js TypeScript service that searches nearby places without websites, with a health probe that includes a Google Places connectivity/auth check.
 
-## Quick start
+The backend lives in `back/`. Frontend code belongs in `front/`.
+
+## Backend quick start
 
 ```bash
-# Remove any orphan node_modules left from prior experiments, then:
+cd back
 cp .env.example .env
 npm install
 npm run typecheck
@@ -89,7 +91,9 @@ For status codes, XOR rules, and live vs intended behavior, see **[docs/api.md](
 - **[docs/architecture.md](./docs/architecture.md)** — layer map and boundaries
 - **[CONCEPTS.md](./CONCEPTS.md)** — shared vocabulary
 
-## Scripts
+## Backend scripts
+
+Run these from `back/`.
 
 | Script | Purpose |
 |--------|---------|

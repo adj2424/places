@@ -29,7 +29,13 @@ export class PlacesServiceImpl implements PlacesService {
       googlePlacesApiCalls++;
       const places = await this.googlePlacesAdapter.getPlaces(center.latitude, center.longitude, radius, primaryTypes, signal);
       for (const place of places) {
-        if (found.has(place.id)) continue;
+        const existing = found.get(place.id);
+        if (existing) {
+          if (!existing.websiteUri?.trim() && place.websiteUri?.trim()) {
+            found.set(place.id, { ...existing, websiteUri: place.websiteUri });
+          }
+          continue;
+        }
         if (cell !== root) {
           if (!place.location) throw new GenericError(Date.now() - started);
           if (!withinRadius(coordinates, place.location, radiusMeters)) continue;
@@ -40,7 +46,8 @@ export class PlacesServiceImpl implements PlacesService {
         pending.push(...subdivide(cell, radiusMeters));
       }
     }
-    return { places: Array.from(found.values()), googlePlacesApiCalls };
+    const placesWithoutWebsites = Array.from(found.values()).filter(place => !place.websiteUri?.trim());
+    return { places: placesWithoutWebsites, googlePlacesApiCalls };
   }
 
   async getCoordinatesByAddress(address: string): Promise<Coordinates> {

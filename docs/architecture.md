@@ -9,7 +9,7 @@ How to add a feature: [AGENTS.md](../AGENTS.md). Glossary: [CONCEPTS.md](../CONC
 ```
 HTTP client
     ↓
-feature adapters (Express routes under src/health/, src/places/, …)
+feature adapters (Express routes under back/src/health/, back/src/places/, …)
     ↓
 service / domain (per slice)
     ↓
@@ -22,11 +22,11 @@ outbound adapters (Google client, Places Nearby Search, Geocoding)
 
 - Domain and service layers must not import Express, HTTP types, or client SDKs.
 - Adapters depend inward on domain/service ports.
-- Outbound Google I/O lives under `src/shared/client/` (intended shared client) and slice adapters, wired from `src/composition/build-app.ts`.
+- Outbound Google I/O lives under `back/src/shared/client/` (intended shared client) and slice adapters, wired from `back/src/composition/build-app.ts`.
 
 ## Composition root
 
-`buildApp(config, logger)` in `src/composition/build-app.ts` is the **single** registration path:
+`buildApp(config, logger)` in `back/src/composition/build-app.ts` is the **single** registration path:
 
 - Process entry: `loadConfig()` → `createLogger` → `buildApp(config, logger)` → `listen`
 - Tests: `buildApp(config, logger)` → `supertest(app)` (no listen required)
@@ -49,10 +49,10 @@ Adapter error-mapping (**400** validation / unmatched geocode, **502** upstream 
 
 | Adapter | Location | Role |
 |---------|----------|------|
-| Google HTTP client | `src/shared/client/client.ts` | Shared `fetch` + API key + field mask (GET/POST) |
-| Google Places nearby search | `src/places/adapters/google.ts` | `searchNearby` for find-places |
-| Google Geocoding v3 | `src/places/adapters/geocoding.ts` | Address → unique lat/lng origin for find-places address mode; hardcoded `maps.googleapis.com` (does not use `GOOGLE_BASE_URL`) |
-| Google Places health ping | `src/health/adapters/google-health.ts` | **Intended product:** Place Details GET for `/health` connectivity/auth. **Live today:** `HEAD https://www.google.com` — see [api.md](./api.md) |
+| Google HTTP client | `back/src/shared/client/client.ts` | Shared `fetch` + API key + field mask (GET/POST) |
+| Google Places nearby search | `back/src/places/adapters/google.ts` | `searchNearby` for find-places |
+| Google Geocoding v3 | `back/src/places/adapters/geocoding.ts` | Address → unique lat/lng origin for find-places address mode; hardcoded `maps.googleapis.com` (does not use `GOOGLE_BASE_URL`) |
+| Google Places health ping | `back/src/health/adapters/google-health.ts` | **Intended product:** Place Details GET for `/health` connectivity/auth. **Live today:** `HEAD https://www.google.com` — see [api.md](./api.md) |
 
 Composition wires health and find-places services in `buildApp`.
 
@@ -66,7 +66,7 @@ Validation for find-places lives at the HTTP edge (Zod).
 
 ## Config
 
-Zod-validated config in `src/composition/config.ts` (`PORT`, `LOG_LEVEL`, `GOOGLE_API_KEY`, `GOOGLE_BASE_URL`). Ban raw `process.env` outside that module. Ship `.env.example`; keep `.env` gitignored. `GOOGLE_BASE_URL` is the Places host only; Geocoding uses a hardcoded Maps host. Address mode needs Geocoding API enabled on the same `GOOGLE_API_KEY`. `npm test` does not require a Google key.
+Zod-validated config in `back/src/composition/config.ts` (`PORT`, `LOG_LEVEL`, `GOOGLE_API_KEY`, `GOOGLE_BASE_URL`). Ban raw `process.env` outside that module. Ship `back/.env.example`; keep `.env` gitignored. `GOOGLE_BASE_URL` is the Places host only; Geocoding uses a hardcoded Maps host. Address mode needs Geocoding API enabled on the same `GOOGLE_API_KEY`. `npm test` does not require a Google key.
 
 ## Health probe notes
 

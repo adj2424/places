@@ -1,6 +1,6 @@
 # Places service — HTTP API (v1)
 
-OpenAPI-style reference for the **live** inbound HTTP surface. Source of truth: `src/health/adapters/health-routes.ts`, `src/health/adapters/google-health.ts`, and `src/places/adapters/find-places-route.ts`.
+OpenAPI-style reference for the **live** inbound HTTP surface. Source of truth: `back/src/health/adapters/health-routes.ts`, `back/src/health/adapters/google-health.ts`, and `back/src/places/adapters/find-places-route.ts`.
 
 Layer map and outbound adapters: [architecture.md](./architecture.md). Glossary: [CONCEPTS.md](../CONCEPTS.md).
 
@@ -18,9 +18,9 @@ Layer map and outbound adapters: [architecture.md](./architecture.md). Glossary:
 
 | URL | Notes |
 |-----|-------|
-| `http://127.0.0.1:{PORT}` | Default `PORT` is **3001** (`src/composition/config.ts`). The process listens on all interfaces; `127.0.0.1` is the usual local caller convention. |
+| `http://127.0.0.1:{PORT}` | Default `PORT` is **3001** (`back/src/composition/config.ts`). The process listens on all interfaces; `127.0.0.1` is the usual local caller convention. |
 
-Process startup requires `GOOGLE_API_KEY`, `GOOGLE_PLACES_BASE_URL`, and `GOOGLE_GEOCODING_BASE_URL` (see `.env.example`). Missing config prevents listen; that is not an HTTP response.
+Process startup requires `GOOGLE_API_KEY`, `GOOGLE_PLACES_BASE_URL`, and `GOOGLE_GEOCODING_BASE_URL` (see `back/.env.example`). Missing config prevents listen; that is not an HTTP response.
 
 ## Living-docs drift
 
@@ -184,7 +184,7 @@ Issue objects follow [Zod's `ZodIssue`](https://zod.dev) shape (`code`, `path`, 
 - **`total`:** Count of items in `places` (same length as the array).
 - **`googlePlacesApiCalls`** counts the initial Nearby Search call and any subdivision calls made for this request. The count covers Nearby Search only.
 - **`primaryTypes` omitted:** Passed to the service as `[]` (empty `includedPrimaryTypes` on the Google request).
-- **Website filter:** Not applied today — places with a website may appear in results.
+- **Website filter** returns only places whose Google listing has a missing or blank website. The filter applies after search and deduplication.
 - **Search coverage:** A Google response with 20 places triggers searches of smaller overlapping circles, down to a 50-meter radius. Smaller original requests run once at their requested radius. Results from all calls are combined by Google place ID within the original circle. A dense search can take many requests.
 - **Completeness:** A circle that still returns 20 places at the minimum radius may contain additional matches. The response contains the places discovered, with no client paging parameter or completeness indicator. If any call fails, the endpoint returns its usual mapped error for the entire search.
 
@@ -264,6 +264,6 @@ Public mapping from Google Nearby Search (website field excluded).
 
 Request-time category keys (this service's catalog). Send these keys in `primaryTypes`, not Google type strings such as `restaurant`.
 
-Allowed values (from `PrimaryTypes` in `src/places/domain/google-places.ts`):
+Allowed values (from `PrimaryTypes` in `back/src/places/domain/google-places.ts`):
 
 `automotive`, `business`, `culture`, `education`, `entertainmentAndRecreation`, `facilities`, `finance`, `foodAndDrink`, `geographicalAreas`, `government`, `healthAndWellness`, `housing`, `lodging`, `naturalFeatures`, `placesOfWorship`, `services`, `shopping`, `sports`, `transportation`

@@ -4,7 +4,10 @@ Portable coding harness for humans and agents. This file is authoritative for ho
 
 ## Commands
 
+Run backend commands from `back/`.
+
 ```bash
+cd back
 cp .env.example .env   # once, before first `dev`
 npm install            # from committed package.json / package-lock.json only
 npm run typecheck
@@ -18,16 +21,16 @@ npm run dev
 
 | Concern                              | Location                                                                                                                                                                              |
 | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Health slice                         | `src/health/`                                                                                                                                                                         |
-| Places slice                         | `src/places/`                                                                                                                                                                         |
-| Shared Google HTTP client (intended) | `src/shared/client/`                                                                                                                                                                  |
-| Shared logging                       | `src/shared/logging/`                                                                                                                                                                 |
-| Config + `buildApp` wiring           | `src/composition/`                                                                                                                                                                    |
-| Process listen entry                 | `src/main.ts`                                                                                                                                                                         |
+| Health slice                         | `back/src/health/`                                                                                                                                                                         |
+| Places slice                         | `back/src/places/`                                                                                                                                                                         |
+| Shared Google HTTP client (intended) | `back/src/shared/client/`                                                                                                                                                                  |
+| Shared logging                       | `back/src/shared/logging/`                                                                                                                                                                 |
+| Config + `buildApp` wiring           | `back/src/composition/`                                                                                                                                                                    |
+| Process listen entry                 | `back/src/main.ts`                                                                                                                                                                         |
 | HTTP API reference (live fields)     | `docs/api.md`                                                                                                                                                                         |
 | Documented solutions                 | `docs/solutions/` — past problems and patterns organized by category with YAML frontmatter (`module`, `tags`, `problem_type`); snapshots. Living docs plus composition win on layout. |
 | Shared vocabulary                    | `CONCEPTS.md`                                                                                                                                                                         |
-| Tests                                | `tests/<slice>/` for service/domain; HTTP via `supertest` and `buildApp(config, logger)`                                                                                              |
+| Tests                                | `back/tests/<slice>/` for service/domain; HTTP via `supertest` and `buildApp(config, logger)`                                                                                              |
 
 Dependency rule: `domain` and `service` never import Express or other adapter SDKs. HTTP is an inbound adapter only. Layers, HTTP surface, outbound adapters, and config: [docs/architecture.md](./docs/architecture.md).
 
@@ -57,20 +60,20 @@ Dependency rule: `domain` and `service` never import Express or other adapter SD
 
 ## Add a feature (numbered recipe)
 
-New functions live under `src/<name>/{domain,service,adapters}/`. Point at both `src/health/` and `src/places/` as examples — there is no single copy-me feature.
+New functions live under `back/src/<name>/{domain,service,adapters}/`. Point at both `back/src/health/` and `back/src/places/` as examples — there is no single copy-me feature.
 
-1. Domain — types / invariants under `src/<name>/domain/` (no framework imports).
-2. Service — use case under `src/<name>/service/` calling domain only.
-3. Adapters — inbound HTTP and outbound I/O under `src/<name>/adapters/` (validate at the HTTP edge; map domain errors there: **400** validation, **502** upstream unavailability, **500** unexpected).
-4. Composition — register inside `buildApp` in `src/composition/build-app.ts` (same factory used by `src/main.ts` and tests: `buildApp(config, logger)`).
-5. Tests — only if the user asked. Service/domain under `tests/<name>/`; HTTP via `supertest` and `buildApp(config, logger)`.
+1. Domain — types / invariants under `back/src/<name>/domain/` (no framework imports).
+2. Service — use case under `back/src/<name>/service/` calling domain only.
+3. Adapters — inbound HTTP and outbound I/O under `back/src/<name>/adapters/` (validate at the HTTP edge; map domain errors there: **400** validation, **502** upstream unavailability, **500** unexpected).
+4. Composition — register inside `buildApp` in `back/src/composition/build-app.ts` (same factory used by `back/src/main.ts` and tests: `buildApp(config, logger)`).
+5. Tests — only if the user asked. Service/domain under `back/tests/<name>/`; HTTP via `supertest` and `buildApp(config, logger)`.
 6. Verify — `npm run typecheck` and `npm test` (run existing tests; do not add new ones to make this step exist).
 
 Exemplar references:
 
-- Health: `src/health/domain/`, `src/health/service/`, `src/health/adapters/`
-- Places: `src/places/domain/`, `src/places/service/`, `src/places/adapters/`
-- Wiring: `src/composition/build-app.ts`
+- Health: `back/src/health/domain/`, `back/src/health/service/`, `back/src/health/adapters/`
+- Places: `back/src/places/domain/`, `back/src/places/service/`, `back/src/places/adapters/`
+- Wiring: `back/src/composition/build-app.ts`
 
 ## Boundaries
 
