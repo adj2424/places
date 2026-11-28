@@ -17,7 +17,20 @@ npm run dev
 
 `typecheck` and `test` must not require a committed `.env`. `dev` requires a local `.env` (gitignored).
 
-## Architecture map
+Run frontend commands from `front/`.
+
+```bash
+cd front
+npm install
+npm run dev
+npm test
+npm run lint
+npm run build
+```
+
+The frontend build includes `tsc -b`. It has no separate `typecheck` script. See [README.md](./README.md) for running both processes and configuring CORS.
+
+## Backend architecture map
 
 | Concern                              | Location                                                                                                                                                                              |
 | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -34,7 +47,7 @@ npm run dev
 
 Dependency rule: `domain` and `service` never import Express or other adapter SDKs. HTTP is an inbound adapter only. Layers, HTTP surface, outbound adapters, and config: [docs/architecture.md](./docs/architecture.md).
 
-## Always / Ask first / Never
+## Backend rules
 
 **Always**
 
@@ -58,7 +71,7 @@ Dependency rule: `domain` and `service` never import Express or other adapter SD
 - Rely on `.cursor/rules` or chat history as the source of truth.
 - Treat orphan `node_modules` or leftover `.env` secrets as the project stack — install from committed manifests only.
 
-## Add a feature (numbered recipe)
+## Add a backend feature
 
 New functions live under `back/src/<name>/{domain,service,adapters}/`. Point at both `back/src/health/` and `back/src/places/` as examples — there is no single copy-me feature.
 
@@ -74,6 +87,25 @@ Exemplar references:
 - Health: `back/src/health/domain/`, `back/src/health/service/`, `back/src/health/adapters/`
 - Places: `back/src/places/domain/`, `back/src/places/service/`, `back/src/places/adapters/`
 - Wiring: `back/src/composition/build-app.ts`
+
+## Frontend architecture and rules
+
+| Concern | Location |
+| --- | --- |
+| Search form and request body | `front/src/search/` |
+| Places browser client, types and category catalog | `front/src/places/` |
+| Search-area map and display geocoding | `front/src/map/` |
+| Results list | `front/src/results/` |
+| Cross-panel state and request generations | `front/src/App.tsx` |
+| Browser entry | `front/src/main.tsx` |
+| Theme tokens and Tailwind entry | `front/src/index.css` |
+| Existing tests | Colocated under `front/src/<slice>/` |
+
+Add work in the matching feature folder. Keep panel styling in Tailwind utilities on the JSX and cross-panel state in `App.tsx`. Keep the origin marker and radius circle on the map. Send `POST /find-places` through the browser client. Address rows can link to Google Maps by place ID. Do not add result pins, invent place coordinates, or add a Vite proxy.
+
+Ask before adding any outbound integration, geocoding result rows, changing CORS, adding a Google Maps JS key, changing Places error mapping or Results failure copy, using a ports-and-adapters layout for the frontend, or introducing persistence, auth, deployment, or external access. A request that names error mapping or failure copy authorizes that work.
+
+Run the existing `npm test` and `npm run build` from `front/` after frontend changes. The rule against unsolicited test changes applies to both packages. Update this file if the top-level frontend folders, the wiring role of `App.tsx`, or package scripts change. Update [docs/architecture.md](./docs/architecture.md) if the folders change.
 
 ## Boundaries
 
